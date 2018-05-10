@@ -6,7 +6,7 @@ This is a collection of tools used for analyzing cosmic-ray arrival distribution
 The project is divided into three subprojects:
 
 ## iter-lhreco
-C++ implementation of maximum-likelihood technique for reconstructing cosmic-ray anisotropy
+C++ implementation of maximum-likelihood technique for reconstructing cosmic-ray anisotropy maps
 http://iopscience.iop.org/article/10.3847/0004-637X/823/1/10
 
 ## simpledst-maps
