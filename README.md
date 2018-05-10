@@ -28,6 +28,7 @@ iter-lhreco dependencies:
 * CFITSIO: depends on cfitsio: https://heasarc.gsfc.nasa.gov/fitsio/fitsio.html 
 * GNU Scientific Library: depends on gsl: https://www.gnu.org/software/gsl/doc/html/index.html
 * HEALpix: depends on healpix: http://healpix.sourceforge.net/
+* BOOST C++ libraries: https://www.boost.org/
 
 
 simpledst-maps dependencies:
