@@ -42,10 +42,13 @@ simpledst-maps dependencies:
 scripts:
 
 
-
 **Installation**:
 
+The C++ projects are built using CMake.
+Each project has a CMakeList.txt that will detect dependencies and generate a MakeFile. To do this cd into the build directory and excecute the commands:
 
+  cmake ../src;
+  make
 
 
 
