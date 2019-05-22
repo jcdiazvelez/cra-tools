@@ -1,0 +1,7 @@
+Universe  = vanilla
+Executable = npx-execs/npx-6394.sh
+Log = npx-logs/npx-6394.log
+Output = npx-out/npx-6394.out
+Error = npx-error/npx-6394.error
+Notification = NEVER
+Queue

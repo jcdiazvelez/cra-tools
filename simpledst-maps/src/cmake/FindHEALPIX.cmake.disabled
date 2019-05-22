@@ -1,0 +1,148 @@
+#
+#  $Id: gsl.cmake 1862 2014-06-19 17:21:58Z nega $
+#  
+#  Copyright (C) 2007   Troy D. Straszheim  <troy@icecube.umd.edu>
+#  and the IceCube Collaboration <http://www.icecube.wisc.edu>
+#  
+#  This file is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 3 of the License, or
+#  (at your option) any later version.
+#  
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#  
+#  You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>
+#  
+# Try to find gnu scientific library HEALPIX
+# See 
+# http://sourceforge.net/projects/healpix/ 
+#
+# Based on a script of Felix Woelk and Jan Woetzel
+# (www.mip.informatik.uni-kiel.de)
+# 
+# It defines the following variables:
+#  HEALPIX_FOUND - system has HEALPIX lib
+#  HEALPIX_INCLUDE_DIRS - where to find headers 
+#  HEALPIX_LIBRARIES - full path to the libraries
+#  HEALPIX_LIBRARY_DIRS, the directory where the PLplot library is found.
+ 
+#  CMAKE_HEALPIX_CXX_FLAGS  = Unix compiler flags for HEALPIX, essentially "`gsl-config --cxxflags`"
+#  HEALPIX_LINK_DIRECTORIES = link directories, useful for rpath on Unix
+#  HEALPIX_EXE_LINKER_FLAGS = rpath on Unix
+ 
+set( HEALPIX_FOUND OFF )
+set( HEALPIX_CONFIG healpix-cxx-config )
+if( HEALPIX_VERSION )
+  set( HEALPIX_CONFIG healpix-config_${HEALPIX_VERSION} )
+endif( HEALPIX_VERSION )
+ 
+# Windows, but not for Cygwin and MSys where gsl-config is available
+if( WIN32 AND NOT CYGWIN AND NOT MSYS )
+  # look for headers
+  find_path( HEALPIX_INCLUDE_DIR
+    NAMES healpix-cxx/healpix/healpix_base.h healpix-cxx/healpix/healpix_map.h healpix_cxx/healpix_base.h healpix_cxx/healpix_map.h
+    )
+  if( HEALPIX_INCLUDE_DIR )
+    # look for healpix library
+    find_library( HEALPIX_LIBRARY
+      NAMES healpix-cxx healpix_cxx
+    )  
+    if( HEALPIX_LIBRARY )
+      set( HEALPIX_INCLUDE_DIRS ${HEALPIX_INCLUDE_DIR} )
+      get_filename_component( HEALPIX_LIBRARY_DIRS ${HEALPIX_LIBRARY} PATH )
+      set( HEALPIX_FOUND ON )
+    endif( HEALPIX_LIBRARY )
+ 
+    set( HEALPIX_LIBRARIES ${HEALPIX_LIBRARY} )
+  endif( HEALPIX_INCLUDE_DIR )
+   
+  mark_as_advanced(
+    HEALPIX_INCLUDE_DIR
+    HEALPIX_LIBRARY
+  )
+else( WIN32 AND NOT CYGWIN AND NOT MSYS )
+  if( UNIX OR MSYS )
+    find_program( HEALPIX_CONFIG_EXECUTABLE ${HEALPIX_CONFIG}
+      ${HEALPIX_DIR}
+      /usr/bin/
+      /usr/local/bin
+    )
+     
+    if( HEALPIX_CONFIG_EXECUTABLE ) 
+      set( HEALPIX_FOUND ON )
+       
+      # run the gsl-config program to get cxxflags
+      execute_process(
+        COMMAND sh "${HEALPIX_CONFIG_EXECUTABLE}" --cppflags
+        OUTPUT_VARIABLE HEALPIX_CFLAGS
+        RESULT_VARIABLE RET
+        ERROR_QUIET
+        )
+      if( RET EQUAL 0 )
+        string( STRIP "${HEALPIX_CFLAGS}" HEALPIX_CFLAGS )
+        separate_arguments( HEALPIX_CFLAGS )
+ 
+        # parse definitions from cflags; drop -D* from CFLAGS
+        string( REGEX MATCHALL "-D[^;]+"
+          HEALPIX_DEFINITIONS  "${HEALPIX_CFLAGS}" )
+        string( REGEX REPLACE "-D[^;]+;" ""
+          HEALPIX_CFLAGS "${HEALPIX_CFLAGS}" )
+ 
+        # parse include dirs from cflags; drop -I prefix
+        string( REGEX MATCHALL "-I[^;]+"
+          HEALPIX_INCLUDE_DIRS "${HEALPIX_CFLAGS}" )
+        string( REPLACE "-I" ""
+          HEALPIX_INCLUDE_DIRS "${HEALPIX_INCLUDE_DIRS}")
+        string( REGEX REPLACE "-I[^;]+;" ""
+          HEALPIX_CFLAGS "${HEALPIX_CFLAGS}")
+ 
+        message("HEALPIX_DEFINITIONS=${HEALPIX_DEFINITIONS}")
+        message("HEALPIX_INCLUDE_DIRS=${HEALPIX_INCLUDE_DIRS}")
+        message("HEALPIX_CFLAGS=${HEALPIX_CFLAGS}")
+      else( RET EQUAL 0 )
+        set( HEALPIX_FOUND FALSE )
+      endif( RET EQUAL 0 )
+ 
+      # run the healpix-config program to get the libs
+      execute_process(
+        COMMAND sh "${HEALPIX_CONFIG_EXECUTABLE}" --ldflags
+        OUTPUT_VARIABLE HEALPIX_LIBRARIES
+        RESULT_VARIABLE RET
+        ERROR_QUIET
+        )
+      if( RET EQUAL 0 )
+        string(STRIP "${HEALPIX_LIBRARIES}" HEALPIX_LIBRARIES )
+        separate_arguments( HEALPIX_LIBRARIES )
+ 
+        # extract linkdirs (-L) for rpath (i.e., LINK_DIRECTORIES)
+        string( REGEX MATCHALL "-L[^;]+"
+          HEALPIX_LIBRARY_DIRS "${HEALPIX_LIBRARIES}" )
+        string( REPLACE "-L" ""
+          HEALPIX_LIBRARY_DIRS "${HEALPIX_LIBRARY_DIRS}" )
+      else( RET EQUAL 0 )
+        set( HEALPIX_FOUND FALSE )
+      endif( RET EQUAL 0 )
+       
+      MARK_AS_ADVANCED(
+        HEALPIX_CFLAGS
+      )
+      message( STATUS "Using HEALPIX from ${HEALPIX_PREFIX}" )
+    else( HEALPIX_CONFIG_EXECUTABLE )
+      message( STATUS "FindHEALPIX: healpix-config not found.")
+    endif( HEALPIX_CONFIG_EXECUTABLE )
+  endif( UNIX OR MSYS )
+endif( WIN32 AND NOT CYGWIN AND NOT MSYS )
+ 
+if( HEALPIX_FOUND )
+  if( NOT HEALPIX_FIND_QUIETLY )
+    message( STATUS "FindHEALPIX: Found both HEALPIX headers and library" )
+  endif( NOT HEALPIX_FIND_QUIETLY )
+else( HEALPIX_FOUND )
+  if( HEALPIX_FIND_REQUIRED )
+    message( FATAL_ERROR "FindHEALPIX: Could not find HEALPIX headers or library" )
+  endif( HEALPIX_FIND_REQUIRED )
+endif( HEALPIX_FOUND )
