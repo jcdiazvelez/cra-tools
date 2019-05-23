@@ -17,7 +17,6 @@ C++ code for extracting data from IceCube's reduced data format (simple-dst) in 
 Collection of scripts for driving production of extraction, reconstruction and analysis of cosmic-ray data.
 
 
-
 ## Installation
 
 
@@ -35,12 +34,15 @@ simpledst-maps dependencies:
 
 * CFITSIO: depends on cfitsio: https://heasarc.gsfc.nasa.gov/fitsio/fitsio.html 
 * GNU Scientific Library: depends on gsl: https://www.gnu.org/software/gsl/doc/html/index.html
-* Photospline: extraction depends on photospline to make energy cuts: https://github.com/cnweaver/photospline
+* Photospline: extraction depends on photospline to make energy cuts: https://github.com/IceCubeOpenSource/photospline
 * Starlink Positional Astronomy Library: extraction depends on pal: https://github.com/Starlink/pal
 * CERN ROOT: extraction depends on root: https://root.cern.ch/
 * HEALpix: depends on healpix: http://healpix.sourceforge.net/
 
-scripts:
+You will also need:
+
+* [CMake](https://cmake.org) >= 3.1
+* A C++11-compliant compiler (e.g. [gcc](https://gcc.gnu.org) >= 4.8.1 or [clang](https://clang.llvm.org) >= 3.3)
 
 
 **Installation**:
