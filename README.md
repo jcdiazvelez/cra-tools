@@ -1,6 +1,6 @@
 # cra-tools
 
-This is a collection of tools used for analyzing cosmic-ray arrival distributions.
+This is a collection of tools used for analyzing the angular distribution of cosmic-ray arrival directions.
 
 
 The project is divided into three subprojects:
