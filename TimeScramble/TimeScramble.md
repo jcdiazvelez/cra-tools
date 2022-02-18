@@ -23,7 +23,7 @@ of events in sidereal coordinates that may have existed in the data and is an es
 in the case that there was no sidereal anisotropy.
 
 The amount by which each event is shuffled in right ascension depends on the length of the time window 
-![\Delta t](https://latex.codecogs.com/svg.latex?&space;\Delta t) from which event times are sampled. The length of the time window can be several minutes to a maximum of 24 hours. The length of the window indicates the time scale over which the detector acceptance is estimated to be stable in local coordinates and the events are not mixed over the times at which the detector changes direction.
+![\Delta t](https://latex.codecogs.com/svg.latex?&space;\Delta&space;t) from which event times are sampled. The length of the time window can be several minutes to a maximum of 24 hours. The length of the window indicates the time scale over which the detector acceptance is estimated to be stable in local coordinates and the events are not mixed over the times at which the detector changes direction.
 setting. If the environmental conditions change very slowly and the detector operation is quite stable,
 a time window of maximum 24 hours can be used.
 
