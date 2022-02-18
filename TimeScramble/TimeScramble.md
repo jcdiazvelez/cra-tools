@@ -28,7 +28,7 @@ setting. If the environmental conditions change very slowly and the detector ope
 a time window of maximum 24 hours can be used.
 
 The estimation of the reference level determined by the time randomization method has some disadvantages. At the South Pole, the declination of
-an event ![\delta] has degeneracy with the zenith angle $\theta$ in local coordinates, regardless of the arrival time of the event. Since the time of events is
+an event ![\delta](https://latex.codecogs.com/svg.latex?&space;\delta) has degeneracy with the zenith angle ![\theta](https://latex.codecogs.com/svg.latex?&space;\theta) in local coordinates, regardless of the arrival time of the event. Since the time of events is
 randomized, these remain in the same declination band, which reduces the sensitivity of the anisotropic search for structures oriented mostly along declination parallels.
 For example, a dipole anisotropy aligned with the Earth's axis of rotation would produce a distribution of events that would be
 indistinguishable from a zenith angle effect caused by detector using time randomization method and therefore not detected.
