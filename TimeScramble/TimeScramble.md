@@ -5,8 +5,8 @@ which compares the distribution of observed events.
 
 In order to produce a data map and a reference map with equatorial coordinates binned into a fine (HEALPix) grid. 
 
-The data map contains the directions of events in equatorial coordinates (![\alpha,\delta](https://latex.codecogs.com/svg.latex?\Large&space;\alpha,\delta)))
-calculated from their respetive local coordinates (![\theta, \phi]) and arrival time ![t]. The distribution of events in this
+The data map contains the directions of events in equatorial coordinates (![\alpha,\delta](https://latex.codecogs.com/svg.latex?&space;\alpha,\delta)))
+calculated from their respetive local coordinates (![\theta, \phi](https://latex.codecogs.com/svg.latex?&space;\theta, \phi)) and arrival time ![t]. The distribution of events in this
 The map is still highly anisotropic as it preserves the uneven exposure of the detector to different parts of the sky.
 
 The anisotropy in the data map has two sources: one due to detector exposure effects as mentioned above, and a second from
@@ -16,7 +16,7 @@ untangles these two sources, keeping the local coordinates of each event fixed w
 To do this, each event in the data set is assigned a random time taken from the time distribution of all events in the data set.
 data in order to track deficiencies in data acquisition.
 For each real event in the data, 20 ``false'' events are generated in order to reduce statistical fluctuations. 
-The false events are used to build the reference map. This process effectively shuffles the right ascension $\alpha$ of the event
+The false events are used to build the reference map. This process effectively shuffles the right ascension ![\alpha](https://latex.codecogs.com/svg.latex?&space;\alpha)) of the event
 keeping local coordinates and detector rate
 no change from actual data. This procedure destroys the autocorrelation
 of events in sidereal coordinates that may have existed in the data and is an estimate of what the distribution of events would have
