@@ -5,7 +5,7 @@ which compares the distribution of observed events.
 
 In order to produce a data map and a reference map with equatorial coordinates binned into a fine (HEALPix) grid. 
 
-The data map contains the directions of events in equatorial coordinates (![\alpha,\delta])
+The data map contains the directions of events in equatorial coordinates (![\alpha,\delta](https://latex.codecogs.com/svg.latex?\Large&space;\alpha,\delta)))
 calculated from their respetive local coordinates (![\theta, \phi]) and arrival time ![t]. The distribution of events in this
 The map is still highly anisotropic as it preserves the uneven exposure of the detector to different parts of the sky.
 
