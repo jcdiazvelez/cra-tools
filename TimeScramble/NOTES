@@ -1,0 +1,15 @@
+# Compiled with cvmfs_jc, /data/user/fmcnally/offline/V04-08-00
+#   - complains about BOOST things, but compiles anyway
+
+# - Attempting to adapt old code to run with new daily root files
+
+# - Problem: old boost version doesn't support multiple multi-token options?
+#     - not sure if this is the problem, but it doesn't seem to recognize *any*
+#     options in the variables_map
+
+# - Solutions:
+#     - Use a newer version of boost
+#         - tried to recompile offline software w/ updated CVMFS (failed)
+#         - tried to use updated BOOST flags in Makefile (chickened out)
+#     - Rewrite to use previous workaround: text file w/ file names
+
