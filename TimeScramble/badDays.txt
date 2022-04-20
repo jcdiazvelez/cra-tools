@@ -1,0 +1,60 @@
+This file contains a running list of files that gave an error output as we
+reprocess the DST maps.
+
+IC86-2020
+
+Badread files
+ic86_simpleDST_2020-06-13_run134185_part06.root
+ic86_simpleDST_2020-08-04_run134348_part01.root
+ic86_simpleDST_2020-08-16_run134391_part01.root
+ic86_simpleDST_2020-09-01_run134440_part04.root
+ic86_simpleDST_2020-09-15_run134494_part06.root
+ic86_simpleDST_2020-10-12_run134594_part08.root
+ic86_simpleDST_2020-10-20_run134618_part08.root
+ic86_simpleDST_2020-11-02_run134660_part05.root
+ic86_simpleDST_2020-11-07_run134675_part08.root
+ic86_simpleDST_2020-11-09_run134683_part02.root
+ic86_simpleDST_2021-01-14_run134894_part04.root
+ic86_simpleDST_2021-01-21_run134913_part04.root
+ic86_simpleDST_2021-02-16_run135004_part05.root
+ic86_simpleDST_2021-03-13_run135087_part00.root
+ic86_simpleDST_2021-03-21_run135110_part06.root
+ic86_simpleDST_2021-03-23_run135118_part07.root
+ic86_simpleDST_2021-04-18_run135205_part08.root
+ic86_simpleDST_2021-05-05_run135257_part02.root
+ic86_simpleDST_2021-05-13_run135284_part00.root
+ic86_simpleDST_2021-05-20_run135304_part06.root
+
+Missing TDSTTrigger
+ic86_simpleDST_2020-05-31_run134144_part02.root
+ic86_simpleDST_2020-06-13_run134184_part05.root
+ic86_simpleDST_2020-07-16_run134290_part07.root
+ic86_simpleDST_2020-09-14_run134491_part06.root
+ic86_simpleDST_2020-11-04_run134665_part02.root
+ic86_simpleDST_2020-12-17_run134806_part11.root
+ic86_simpleDST_2021-01-19_run134908_part07.root
+ic86_simpleDST_2021-02-10_run134978_part00.root
+ic86_simpleDST_2021-03-03_run135052_part06.root
+ic86_simpleDST_2021-03-15_run135092_part07.root
+ic86_simpleDST_2021-03-20_run135108_part03.root
+ic86_simpleDST_2021-04-07_run135166_part01.root
+
+Other (truncated, cannot find StreamerInfo)
+ic86_simpleDST_2021-03-14_run135089_part08.root
+
+
+IC86-2019
+
+None!
+
+
+IC86-2018
+
+Badread files
+ic86_simpleDST_2019-02-18_run132218_part02.root
+
+Missing TDSTTrigger
+ic86_simpleDST_2018-07-25_run131312_part05.root
+ic86_simpleDST_2019-01-11_run132030_part06.root
+ic86_simpleDST_2019-02-18_run132217_part04.root
+

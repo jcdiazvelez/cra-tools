@@ -5,6 +5,9 @@ This is a collection of tools used for analyzing the angular distribution of cos
 
 The project is divided into three subprojects:
 
+## TimeScramble
+Time-scrambling code for IceCube CRA studies. Currently only reads ROOT format SimpleDST files.
+
 ## iter-lhreco
 C++ implementation of maximum-likelihood technique for reconstructing cosmic-ray anisotropy maps
 http://iopscience.iop.org/article/10.3847/0004-637X/823/1/10
