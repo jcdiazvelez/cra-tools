@@ -1,5 +1,6 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.0)
 
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -DBOOST_LOG_DYN_LINK")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
 project(time-scramble CXX C)
@@ -13,7 +14,8 @@ include(CheckIncludeFile)
 FIND_PACKAGE(HEALPIX REQUIRED)
 FIND_PACKAGE(CFITSIO REQUIRED)
 #FIND_PACKAGE(Boost REQUIRED)
-FIND_PACKAGE(Boost COMPONENTS system filesystem program_options REQUIRED)
+#FIND_PACKAGE(Boost COMPONENTS system filesystem program_options REQUIRED)
+FIND_PACKAGE(Boost 1.36.0 COMPONENTS system filesystem program_options iostreams REQUIRED)
 FIND_PACKAGE(ROOT)
 #FIND_PACKAGE(PHOTOSPLINE)
 FIND_PACKAGE(photospline REQUIRED)
@@ -43,12 +45,17 @@ add_executable(TimeScramble
             private/SimpleDST.cc)
 
 add_executable(checksd
-            private/checksd
+            private/checksd.cc
             private/solardipole.cc
             private/astro.cxx
             private/time.cxx
             private/SimpleTrigger.cc
             private/SimpleDST.cc)
+
+add_executable(tsmc
+            private/tsmc.cxx
+            private/solardipole.cc)
+
 
  
 
@@ -67,6 +74,15 @@ target_link_libraries(checksd
                 ${Boost_LIBRARIES} 
                 ${PHOTOSPLINE_LIBRARIES}
                 ${ROOT_LIBRARIES})
+
+target_link_libraries(tsmc
+                ${PAL_LIBRARIES} 
+                ${CFITSIO_LIBRARIES} 
+                ${HEALPIX-CXX_LIBRARIES} 
+                ${Boost_LIBRARIES} 
+                ${PHOTOSPLINE_LIBRARIES} -lboost_log)
+
+
 
 if(IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/scripts)
     
