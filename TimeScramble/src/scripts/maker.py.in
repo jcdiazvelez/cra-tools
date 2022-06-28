@@ -4,7 +4,6 @@ import os, glob, re, argparse
 import datetime as dt
 import random
 
-# npx4 submission from /home/fmcnally/npx4/pysubmit.py
 from npx4.pysubmit import pysubmit
 
 def getDSTfiles(config):
@@ -74,7 +73,7 @@ if __name__ == "__main__":
 
     # Additional options
     p.add_argument('-o', '--outDir', dest='outDir',
-            default='/data/user/fmcnally/anisotropy/maps',
+            default='@CRA_BUILD@/maps',
             help='Destination directory for output files')
     p.add_argument('--test', dest='test',
             default=False, action='store_true',
@@ -89,6 +88,8 @@ if __name__ == "__main__":
             help='Path to spline files')
     p.add_argument('--cvmfs', dest='cvmfs',
             default='/cvmfs/icecube.opensciencegrid.org/py3-v4.2.1/' \
+    p.add_argument('--submit_dir', dest='submit_dir',
+            default='@CRA_BUILD@/submit-dir' \
 
     args = p.parse_args()
     c_opts = vars(args).copy()
@@ -256,11 +257,10 @@ if __name__ == "__main__":
         jobID = 'timescramble_%s_%05i' % (args.config, random.randint(0,99999))
         cmd  = '@CRA_BUILD@/TimeScramble' 
         ex = [cmd, '--batch_idx', str(i), '--yyyymmdd', dateList[i], c_opts]
-        #ex = ex + ['--inFiles', oneDay]
         ex = ' '.join(ex)
         print(ex)
         print('')
-        pysubmit(ex, sublines=sublines, test=args.test, jobID=jobID,
+        pysubmit(ex, sublines=sublines, outdir=args.submit_dir, test=args.test, jobID=jobID,
                 header=header)
 
 
