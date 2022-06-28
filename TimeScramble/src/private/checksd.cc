@@ -21,6 +21,9 @@
 #include <photospline/bspline.h>
 
 #include <boost/program_options.hpp>
+#include <boost/filesystem.hpp>
+
+namespace fs = boost::filesystem; 
 
 
 #include <astro/astro.h>
@@ -37,11 +40,14 @@ const double rad2deg = TMath::RadToDeg();
 
 int main(int argc, char* argv[]) {
 
-  int NSide = 16;
+  int NSide = 32;
 
-  Healpix_Map<float> testmap;
-  testmap.SetNside(NSide, RING);
-  testmap.fill(0.);
+  Healpix_Map<float> dipolemap;
+  Healpix_Map<float> socmap;
+  dipolemap.SetNside(NSide, RING);
+  socmap.SetNside(NSide, RING);
+  dipolemap.fill(0.);
+  socmap.fill(0.);
 
   pointing sphereDir;
   int pixelID;
@@ -63,10 +69,12 @@ int main(int argc, char* argv[]) {
   //*********************************************************************//
   // Begin iterating through events
   //*********************************************************************//
-  int npix = testmap.Npix();
+  int npix = dipolemap.Npix();
   double sdweight;
+  double socweight;
 
-  for (double j=0; j<365; j++) {
+  //for (double j=0; j<365; j++) {
+  for (double j=0; j<1; j++) {
     t.SetTime(mjd1+j);
     t1.SetTime(mjd1+j-.25);
 
@@ -82,11 +90,12 @@ int main(int argc, char* argv[]) {
     double dr,dd;
 
     for (unsigned ipix=0; ipix<npix; ++ipix) { 
-            pointing p = testmap.pix2ang(ipix);
+            pointing p = dipolemap.pix2ang(ipix);
             Direction dir(p.theta, p.phi);
             Equatorial eq = GetEquatorialFromDirection(dir, t.GetMJD());
 
-            sdweight = solar_dipole(mjd1+j, eq.ra, eq.dec);
+            sdweight = solar_dipole(mjd1+j, eq.ra, eq.dec,false);
+            socweight = solar_dipole(mjd1+j, eq.ra, eq.dec,true);
 
             Equatorial eq1 = GetEquatorialFromDirection(dir, t1.GetMJD());
             if (sdweight > maxsd) 
@@ -103,7 +112,8 @@ int main(int argc, char* argv[]) {
                     maxra1 = eq1.ra;
                     maxdec1 = eq1.dec;
             }
-            testmap[ipix] += sdweight;
+            dipolemap[ipix] += sdweight;
+            socmap[ipix] += socweight;
     } 
     double sundr,sundd,diam;      // J2000.0 mean RA,Dec (radians)
     palRdplan(mjd1+j, 0, 0, 0, &sundr, &sundd, &diam);
@@ -117,14 +127,28 @@ int main(int argc, char* argv[]) {
     
   }
   
+    std::cout << "x = [" << std::endl;
+    for (int i=120;i < 180;i++)
+        std::cout << i << "," << std::endl;
+    std::cout << "]" << std::endl;
+    std::cout << "y = [" << std::endl;
+    for (int i=120;i < 180;i++)
+        std::cout << solar_2nd_order(i*units::degree) << "," <<std::endl;
+    std::cout << "]" << std::endl;
     fitshandle fitsOut;
-    arr<std::string> colname(1);
-    fitsOut.create("testmap.fits");
+    arr<std::string> colname(2);
+    string filename("testmap.fits");
+    if (fs::exists(filename) ) { 
+            fs::remove( filename ); 
+    } 
+    fitsOut.create(filename);
     fitsOut.add_comment("Maps: sd");
-    colname[0] = "test map";
-    prepare_Healpix_fitsmap(fitsOut, testmap, PLANCK_FLOAT64, colname);
+    colname[0] = "dipole map";
+    colname[1] = "soc map";
+    prepare_Healpix_fitsmap(fitsOut, dipolemap, PLANCK_FLOAT64, colname);
 
-    fitsOut.write_column(1, testmap.Map());
+    fitsOut.write_column(1, dipolemap.Map());
+    fitsOut.write_column(2, socmap.Map());
     fitsOut.close();
 
   return 0;
