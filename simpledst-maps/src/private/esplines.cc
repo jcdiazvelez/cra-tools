@@ -8,7 +8,7 @@
 #include <photospline/bspline.h>
 
 
-bool ICenergyCut(unsigned NChannels, splinetable t, double zenith, double emin, double emax) {
+bool ICenergyCut(unsigned NChannels, photospline::splinetable<> &spline, double zenith, double emin, double emax) {
 
   // Setup basic parameters
   double x = cos(zenith);
@@ -20,15 +20,15 @@ bool ICenergyCut(unsigned NChannels, splinetable t, double zenith, double emin, 
 
   // Catch additional outliers
   double coords[2] = {x, y};
-  int centers[t.ndim];
-  if (tablesearchcenters(&t, coords, centers) != 0) {
+  int centers[spline.get_ndim()];
+  if (spline.searchcenters(coords, centers) != 0) {
     std::cout << "Variables outside of table boundaries" << std::endl;
     std::cout << "x: " << x << " y: " << y << std::endl;
     return false;
   }
 
   // Calculate reconstructed energy
-  double median = ndsplineeval(&t, coords, centers, 0);
+  double median = spline.ndsplineeval(coords, centers, 0);
   // Make sure we're in the energy bin range
   if (emax <= 0)
      return (median >= emin); 

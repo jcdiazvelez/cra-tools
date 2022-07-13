@@ -4,11 +4,14 @@
 #include <photospline/splinetable.h>
 #include <photospline/bspline.h>
 
+/*
 bool ICenergyCut(
 	unsigned NChannels, 
 	const photospline::splinetable<> &t, 
 	double zenith, 
 	double emin, 
 	double emax);
+*/
+bool ICenergyCut(unsigned NChannels, photospline::splinetable<> &spline, double zenith, double emin, double emax);
 #endif // __cplusplus
 #endif // ESPLINES

@@ -15,7 +15,7 @@ class SimpleDST {
   SimpleDST(TChain* chain, std::string config) { SetupChain(chain, config); }
   ~SimpleDST() { }
 
-// Joint parameters
+  // Joint parameters
   Double_t ModJulDay;
   // IceCube parameters
   UShort_t NChannels;
@@ -31,16 +31,12 @@ class SimpleDST {
   Bool_t isSTA3ii;
   Bool_t isSTA5;
   Bool_t isSTA8;
-  // ShowerLLH parameters
-  Double_t llhEnergy;
+  Double_t pEnergy;
+  Double_t fEnergy;
   Double_t pLLH;
-  Double_t hLLH;
-  Double_t oLLH;
   Double_t fLLH;
-  Text_t comp;
   Double_t s125;
   Double_t ss125;
-
 
   // Joint parameters
   TBranch* b_ModJulDay;
@@ -58,13 +54,10 @@ class SimpleDST {
   TBranch* b_isSTA3ii;
   TBranch* b_isSTA5;
   TBranch* b_isSTA8;
-  // ShowerLLH parameters
-  TBranch* b_llhEnergy;
+  TBranch* b_pEnergy;
+  TBranch* b_fEnergy;
   TBranch* b_pLLH;
-  TBranch* b_hLLH;
-  TBranch* b_oLLH;
   TBranch* b_fLLH;
-  TBranch* b_comp;
   TBranch* b_s125;
   TBranch* b_ss125;
 

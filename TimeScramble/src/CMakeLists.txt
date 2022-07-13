@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.0)
 
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -DBOOST_LOG_DYN_LINK")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -DBOOST_LOG_DYN_LINK")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
 project(time-scramble CXX C)
@@ -104,9 +104,9 @@ configure_file(${CMAKE_SOURCE_DIR}/scripts/submit_all.py.in
            @ONLY)
 
 if(IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/scripts)
-       #exec_program(test ARGS -h ${CMAKE_BINARY_DIR}/scripts -a -e ${CMAKE_BINARY_DIR}/scripts
-       ##     || ln -snf ${CMAKE_SOURCE_DIR}/scripts ${CMAKE_BINARY_DIR}/scripts
-       #     OUTPUT_VARIABLE DEV_NULL)
+       exec_program(test ARGS -h ${CMAKE_BINARY_DIR}/scripts/npx4 -a -e ${CMAKE_BINARY_DIR}/scripts/npxi4
+            || ln -snf ${CMAKE_SOURCE_DIR}/scripts/npx4 ${CMAKE_BINARY_DIR}/scripts/npx4
+            OUTPUT_VARIABLE DEV_NULL)
        install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/scripts
          DESTINATION ${CMAKE_BINARY_DIR}/scripts
          PATTERN ".svn" EXCLUDE

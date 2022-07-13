@@ -28,8 +28,9 @@
 #include "TFile.h"
 #include "TTree.h"
 
-#include <photospline/splinetable.h>
-#include <photospline/bspline.h>
+//#include <photospline/splinetable.h>
+//#include <photospline/bspline.h>
+#include "esplines.h"
 
 #ifdef HAWCNEST
 #include <hawcnest/Logging.h>
@@ -60,7 +61,7 @@ Sum(const SkyMap& map,unsigned int npix)
 }
 
 
-bool ICenergyCut(unsigned NChannels, splinetable t, double zenith, double emin, double emax);
+//bool ICenergyCut(unsigned NChannels, splinetable t, double zenith, double emin, double emax);
 
 int main(int argc, char* argv[])
 {
@@ -153,11 +154,12 @@ int main(int argc, char* argv[])
     tree->SetBranchAddress("LLHAzimuthDeg", &LLHAzimuthDeg);
 
     // Read in spline tables if provided
-    struct splinetable table;
+    photospline::splinetable<> spline;
     if (vm.count("spline")) {
-       string splineFile = vm["spline"].as<string>();
-       readsplinefitstable(splineFile.c_str(), &table);
+        string splineFile = vm["spline"].as<string>();
+        spline.read_fits(splineFile.c_str());
     }
+
 
 
 
@@ -180,7 +182,7 @@ int main(int argc, char* argv[])
        if ( LDir < ldirmin*cos(LLHZenithDeg) ) 
           continue;
        
-       if ((vm.count("spline")) && !ICenergyCut(NChannels, table, theta, elogmin, elogmax))
+       if ((vm.count("spline")) && !ICenergyCut(NChannels, spline, theta, elogmin, elogmax))
           continue;
 
        llhazimuth = LLHAzimuthDeg;

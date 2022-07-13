@@ -292,10 +292,8 @@ void tScramble(po::variables_map vm, vector<string> inFiles_) {
   }
 
   // Track the local coordinates
-  //vector< vector<Double_t> > LocCoord_theta(nMaps);
-  //vector< vector<Double_t> > LocCoord_phi(nMaps);
-  vector< vector<Float_t> > LocCoord_theta(nMaps);
-  vector< vector<Float_t> > LocCoord_phi(nMaps);
+  vector< vector<Double_t> > LocCoord_theta(nMaps);
+  vector< vector<Double_t> > LocCoord_phi(nMaps);
 
   // Timers to figure out what's taking so long...
   TStopwatch timer1, timer2, timer3, timer4;
@@ -356,10 +354,8 @@ void tScramble(po::variables_map vm, vector<string> inFiles_) {
 
     // SimpleDST cuts (automatically included in Segev-processed files)
     // First: throw away reconstructions too close to poles
-    //const Double_t zLo = 0.002;                  // 0.11 degrees
-    //const Double_t zHi = TMath::Pi() - 0.002;    // 179.89 degrees
-    const Float_t zLo = 0.002;                  // 0.11 degrees
-    const Float_t zHi = TMath::Pi() - 0.002;    // 179.89 degrees
+    const Double_t zLo = 0.002;                  // 0.11 degrees
+    const Double_t zHi = TMath::Pi() - 0.002;    // 179.89 degrees
     if (zenith < zLo || zenith > zHi) {
       isGood = false;
     }
