@@ -1,11 +1,3 @@
-#include <SimpleDST.h>
-
-#include <TChain.h>
-#include <TH1D.h>
-#include <TMath.h>
-#include <TRandom.h>
-#include <TStopwatch.h>
-
 #include <fstream>
 #include <iomanip>
 #include <sstream>
@@ -17,9 +9,6 @@
 #include <healpix_cxx/healpix_map_fitsio.h>
 #include <healpix_cxx/pointing.h>
 
-#include <photospline/splinetable.h>
-#include <photospline/bspline.h>
-
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 
@@ -30,12 +19,13 @@ namespace fs = boost::filesystem;
 #include <astro/time.h>
 
 #include <solardipole.h>
+#include <units.h>
 #include <Direction.h>
 
 
 using namespace std;
-const double deg2rad = TMath::DegToRad();
-const double rad2deg = TMath::RadToDeg();
+const double deg2rad = constants::pi/180.;
+const double rad2deg = 180./constants::pi;
 
 
 int main(int argc, char* argv[]) {
@@ -60,7 +50,7 @@ int main(int argc, char* argv[]) {
   astro::Time t(yy, mm, dd, 0, 0, 0);
   astro::Time t1(yy, mm, dd, 0, 0, 0);
 
-  Double_t mjd1 = t.GetMJD();
+  double mjd1 = t.GetMJD();
 
   // Integration time
 

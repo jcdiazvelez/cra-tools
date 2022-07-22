@@ -16,6 +16,9 @@ SimpleDST::SetupChain(TChain* chain, std::string config)
     chain->SetBranchAddress("ModJulDay", &ModJulDay, &b_ModJulDay);
     chain->SetBranchAddress("LLHAzimuthDeg", &LLHAzimuthDeg, &b_LLHAzimuth);
     chain->SetBranchAddress("LLHZenithDeg", &LLHZenithDeg, &b_LLHZenith);
+    chain->SetBranchAddress("RLogL", &RLogL, &b_RLogL);
+    chain->SetBranchAddress("NDirHits", &NDirHits, &b_NDirHits);
+    chain->SetBranchAddress("LDir", &LDir, &b_LDir);
   }
 
   if (detector == "IT") {

@@ -639,7 +639,7 @@ int ICenergyCut(po::variables_map vm, SimpleDST dst, photospline::splinetable<> 
   // Catch additional outliers
   double coords[2] = {x, y};
   int centers[spline.get_ndim()];
-  if (spline.searchcenters(coords, centers) != 0) {
+  if (!spline.searchcenters(coords, centers)) {
     cout << "Variables outside of table boundaries" << endl;
     cout << "x: " << x << " y: " << y << endl;
     return -1;

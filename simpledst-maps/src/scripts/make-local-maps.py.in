@@ -48,18 +48,9 @@ if __name__ == "__main__":
     p.add_argument('-i', '--inclusive', dest='inclusive',
             default=False, action='store_true',
             help='Treat two dates given as inclusive. Otherwise treat as list')
-    p.add_argument('-t', '--nInt', dest='nInt', type=int,
-            default=24,
-            help='Integration time in hours (default=24)')
-    p.add_argument('-m', '--method', dest='method',
-            default='sid',
-            help='Time transformation method [sid|anti|ext|solar]')
-    p.add_argument('--sd', dest='sd',
+    p.add_argument('--sd', dest='sundp',
             default=False, action='store_true',
             help='Correct for solar dipole on event-by-event basis')
-    p.add_argument('--no-sd2', dest='sd2',
-            default=True, action='store_false',
-            help='skip 2nd order function if applying solar dipole correction')
 
     # Energy cut options
     p.add_argument('--ebins', dest='ebins',
@@ -67,15 +58,13 @@ if __name__ == "__main__":
             help='Option to do all energy bins')
 
     # Additional options
-    p.add_argument('-o', '--outDir', dest='outDir',
+    p.add_argument('-o', '--outdir', dest='outdir',
             # CHANGE: suggested path: /data/user/[username]/maps
             default='@CRA_BUILD@/maps',
             help='Destination directory for output files')
     p.add_argument('--test', dest='test',
             default=False, action='store_true',
             help='Option for running off cluster to test')
-    p.add_argument('--batchFile', dest='batchFile',
-            help='Name for output file containing file lists')
     p.add_argument('--overwrite', dest='overwrite',
             default=False, action='store_true',
             help='Option to overwrite existing map files')
@@ -88,7 +77,27 @@ if __name__ == "__main__":
     p.add_argument('--submit_dir', dest='submit_dir',
             default='@CRA_BUILD@/submit-dir',
             help='submit directory')
-
+    p.add_argument('--elogmax', dest='elogmax',
+            default=4.5,
+            help='max log energy/GeV')
+    p.add_argument('--elogmin', dest='elogmin',
+            default=0.0,
+            help='min log energy/GeV')
+    p.add_argument('--ndirc_min', dest='ndirc_min',
+            default=9,
+            help='min ndir value')
+    p.add_argument('--ldirc_min', dest='ldirc_min',
+            default=200,
+            help='min ldir value')
+    p.add_argument('--rlogmax', dest='rlogmax',
+            default=15,
+            help='maximum reduced log-likelyhood')
+    p.add_argument('--nside', dest='nsideout',
+            default=64,
+            help='Healpix NSide parameter')
+    p.add_argument('--condor-priority', dest='priority',
+            default=1, 
+            help='Job priority in condor')
     ### USER-SPECIFIC PATHS (CHANGE) ###
     """ These paths all refer to directories. Make sure you create your
     own directories as needed """
@@ -104,32 +113,18 @@ if __name__ == "__main__":
 
 
     # Default spline files
-    if args.ebins and args.config[:2]=='IC':
-        sp_file = args.splinepath
-        c_opts['spline'] = sp_file
+    c_opts['spline'] = args.splinepath
 
     # Base name for outfiles
-    outBase = '{outDir}/{config}/{config}_{nInt:02d}H_{method}'.format(**c_opts)
-    if args.sd:
-        if args.sd2:
-            outBase += '_sd2'
-        else:
-            outBase += '_sd'
+    outBase = '{outdir}/{config}'.format(**c_opts)
+    if args.sundp:
+       outBase += '_sd'
     c_opts['outBase'] = outBase
 
-    # Txt file w/ file lists for job submission
-    # Location for submission exec/error/log/output files
-    batchPrefix = '@CRA_BUILD@/tempFiles'
-    if not args.batchFile:
-        if not os.path.isdir(batchPrefix):
-           os.makedirs(batchPrefix)
-        c_opts['batchFile'] = '%s/%s.txt' % \
-                (batchPrefix, os.path.basename(outBase))
-
     # Create output directories if they don't already exist
-    if not os.path.isdir('{outDir}/{config}'.format(**c_opts)):
-        print('Creating output directory {outDir}/{config}'.format(**c_opts))
-        os.makedirs('{outDir}/{config}'.format(**c_opts))
+    if not os.path.isdir('{outBase}'.format(**c_opts)):
+        print('Creating output directory {outBase}'.format(**c_opts))
+        os.makedirs('{outBase}'.format(**c_opts))
 
     # Create list of desired dates
     runDates = []
@@ -174,31 +169,21 @@ if __name__ == "__main__":
     # Split into days for submission
     dateList = [re.findall('\d{4}-\d{2}-\d{2}', f)[-1] for f in fileList]
     dateList = sorted(list(set(dateList)))  # Limit to unique values
-    prev_dates, next_dates = [], []
-    for date_str in dateList:
-        yyyy, mm, dd = [int(i) for i in date_str.split('-')]
-        date = dt.datetime(yyyy, mm, dd)
-        prev_dates += [(date + dt.timedelta(days=-1)).strftime('%Y-%m-%d')]
-        next_dates += [(date + dt.timedelta(days=1)).strftime('%Y-%m-%d')]
 
     # Collect surrounding files to allow runs from midnight to midnight
     # ("Daily" files grouped by run, not actually 24 hours)
     dayFiles = []
-    for day, prev, post in zip(dateList, prev_dates, next_dates):
-        dayFiles += [[f for f in masterList if (day in f)
-                                              or (prev in f)
-                                              or (post in f)]]
+    for day in dateList:
+        dayFiles += [[f for f in masterList if (day in f) ]]
 
     dayFiles = [' '.join(oneDay)+'\n' for oneDay in dayFiles]
     if args.test:
         dayFiles = dayFiles[:1]
-
-    with open(c_opts['batchFile'], 'w') as f:
-        f.writelines(dayFiles)
+        dateList = dateList[:1]
 
     # Set up parameters to feed C++ script
     print('Parameters for submission:')
-    validArgs  = ['config','nInt','method','outBase','spline','batchFile','sd','sd2']
+    validArgs  = ['config','ndirc_min','ldirc_min','elogmax','elogmin','rloglmax','spline','nsideout']
     c_opts = {k:v for k,v in c_opts.items() if v!=None and k in validArgs}
     for key in sorted(c_opts.keys()):
         print('  --%s %s' % (key, c_opts[key]))
@@ -208,17 +193,16 @@ if __name__ == "__main__":
             for e in (flatList(*a) if isinstance(a, (tuple, list)) else (a,)))
     c_opts = ' '.join(list(flatList(c_opts)))
     # Ebins need to go last (multitoken parameters)
-    if args.ebins:
-        print('  --ebins ' + ' '.join([str(i) for i in args.ebins]))
-        c_opts += ' --ebins %s' % ' '.join([str(i) for i in args.ebins])
+    if args.sundp:
+        print('  --sundp')
+        c_opts += ' --sundp'
 
     # Increase requested memory for jobs that produce multiple maps
     ## NOTE: exceeded memory limit (1000 MB) with single day.
     ## Don't remember this being a problem, changing from double to float
     ## does *not* fix it :(
     ## Appears to cap out around 2500 MB
-    sublines = ["request_memory = 6000"]
-    #sublines = ["getenv = True"]
+    sublines = ["request_memory = 3000"]
     if args.ebins:
         sublines = ["request_memory = 6000"]
 
@@ -229,16 +213,20 @@ if __name__ == "__main__":
 
     # Submit files
     print('Submitting %i files...' % len(dayFiles))
+    if not os.path.isdir(args.submit_dir):
+        os.makedirs(args.submit_dir)
     for i in range(len(dayFiles)):
 
-        jobID = 'timescramble_%s_%05i_%05i' % (args.config, i, random.randint(0,99999))
-        cmd  = '@CRA_BUILD@/bin/TimeScramble' 
-        ex = [cmd, '--batch_idx', str(i), '--yyyymmdd', dateList[i], c_opts]
+        jobID = 'makelocalmaps_%s_%05i_%05i' % (args.config, i, random.randint(0,99999))
+        cmd  = '@CRA_BUILD@/bin/make-local-maps' 
+        ex = [cmd, c_opts,'--outdir','{}/{}'.format(outBase,dateList[i]), '--input', dayFiles[i] ]
         ex = ' '.join(ex)
         print(ex)
         print('')
+        os.makedirs('{}/{}'.format(outBase,dateList[i]))
         pysubmit(ex, sublines=sublines, test=args.test, jobID=jobID,
                 outdir=args.submit_dir,
                 header=header,
-                condor_dag='{}/{}.dag'.format(args.submit_dir,args.config)
+                priority=args.priority,
+                condor_dag='{}/{}.make-local-maps.dag'.format(args.submit_dir,args.config)
                 )

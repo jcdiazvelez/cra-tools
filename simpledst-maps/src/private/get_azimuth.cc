@@ -27,10 +27,10 @@
 #include <iter-lhreco-proj/pickle.h>
 #include "TFile.h"
 #include "TTree.h"
+#include "TChain.h"
 
-//#include <photospline/splinetable.h>
-//#include <photospline/bspline.h>
-#include "esplines.h"
+#include "cuts.h"
+#include "SimpleDST.h"
 
 #ifdef HAWCNEST
 #include <hawcnest/Logging.h>
@@ -60,8 +60,6 @@ Sum(const SkyMap& map,unsigned int npix)
     return sumval;
 }
 
-
-//bool ICenergyCut(unsigned NChannels, splinetable t, double zenith, double emin, double emax);
 
 int main(int argc, char* argv[])
 {
@@ -136,22 +134,20 @@ int main(int argc, char* argv[])
     // TFile f("Event.root");
     TFile file(input[0].c_str());
     TFile* outfile = new TFile(filename.c_str(), "recreate");
-    //ofstream fichero(filename);
     
 
-    TTree* tree = (TTree*) file.Get("CutDST");
+    TChain cutDST("CutDST");
+    for (unsigned i = 0; i < input.size(); ++i) { 
+        cutDST.Add(input[i].c_str()); 
+    } 
+    SimpleDST dst(&cutDST, "IC86-2012");
+
     TTree *newtree = new TTree("picoDST", "picoDST");
     newtree->SetAutoSave(10000);
-
-    float LLHZenithDeg, LLHAzimuthDeg, RADeg, DecDeg, RLogL, RaSun, DecSun;
-    double ModJulDay, LocalMST;
-    UShort_t NChannels; 
-    UInt_t NDirHits, LDir;
 
     double llhazimuth;
     newtree->Branch("LLHAzimuthDeg", &llhazimuth, "llhazimuth/D");
 
-    tree->SetBranchAddress("LLHAzimuthDeg", &LLHAzimuthDeg);
 
     // Read in spline tables if provided
     photospline::splinetable<> spline;
@@ -170,22 +166,25 @@ int main(int argc, char* argv[])
     float theta, phi;
     bool init=false;
 
-    for (int i = 0, N = tree->GetEntries(); i < N; ++i) {
-       tree->GetEntry(i); 
+    for (int i = 0, N = cutDST.GetEntries(); i < N; ++i) {
+       cutDST.GetEntry(i); 
 
-       if ( (rloglmax > 0 ) && (RLogL > rloglmax) )
+       theta = dst.LLHZenithDeg*M_PI/180.;
+       phi = dst.LLHAzimuthDeg*M_PI/180.;
+
+       if ( (rloglmax > 0 ) && (dst.RLogL > rloglmax) )
           continue;
 
-       if ( NDirHits < ndirmin*cos(LLHZenithDeg) ) 
+       if ( dst.NDirHits < ndirmin*cos(theta) ) 
           continue;
 
-       if ( LDir < ldirmin*cos(LLHZenithDeg) ) 
+       if ( dst.LDir < ldirmin*cos(phi) ) 
           continue;
        
-       if ((vm.count("spline")) && !ICenergyCut(NChannels, spline, theta, elogmin, elogmax))
+       if ((vm.count("spline")) && !ICenergyCut(dst, spline, theta, elogmin, elogmax))
           continue;
 
-       llhazimuth = LLHAzimuthDeg;
+       llhazimuth = dst.LLHAzimuthDeg;
        newtree->Fill();
        nEvents++;
 

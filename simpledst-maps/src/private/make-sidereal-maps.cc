@@ -19,6 +19,7 @@
 #include <sstream>
 #include <fstream>  
 #include <iomanip>  
+#include <iostream>  
 #include <string>
 #include <stdexcept>
 #include <iterator>
@@ -27,19 +28,19 @@
 #include <iter-lhreco-proj/pickle.h>
 #include "TFile.h"
 #include "TTree.h"
+#include "TROOT.h"
+#include <TChain.h>
 
-//#include <photospline/splinetable.h>
-//#include <photospline/bspline.h>
-#include "esplines.h"
+#include "cuts.h"
 
-#ifdef HAWCNEST
-#include <hawcnest/Logging.h>
-#include <hawcnest/CommandLineConfigurator.h>
-#else
+#include <astro/astro.h>
+#include <astro/time.h>
+#include <Direction.h>
+#include <solardipole.h>
+#include <SimpleTrigger.h>
+
 namespace po = boost::program_options; 
 #define log_info(args...) cout << args << endl
-#endif
-
 
 namespace fs = boost::filesystem; 
 using namespace std;
@@ -48,6 +49,8 @@ using boost::format;
 
 typedef Healpix_Map<double> SkyMap; 
 typedef boost::shared_ptr<SkyMap> SkyMapPtr; // Map shared pointer
+
+bool newConfig(string config);
 
 double 
 Sum(const SkyMap& map,unsigned int npix) 
@@ -61,21 +64,65 @@ Sum(const SkyMap& map,unsigned int npix)
 }
 
 
-//bool ICenergyCut(unsigned NChannels, splinetable t, double zenith, double emin, double emax);
+bool filterCut(po::variables_map vm, SimpleDST dst) {
+
+  string filter = vm["filter"].as<string>();
+  string config = vm["config"].as<string>();
+  if (filter=="STA3" && dst.isSTA3)
+    return true;
+  if (config=="IT59" || config=="IT73" || config=="IT81") {
+    if ((filter=="STA8" && dst.isSTA8) ||
+        (filter=="NotSTA8" && dst.isSTA3 && !dst.isSTA8))
+      return true;
+  }
+  if (config=="IT81-2012" || config=="IT81-2013") {
+    if ((filter=="STA8" && dst.nStations>=8) ||
+        (filter=="NotSTA8" && dst.isSTA3 && dst.nStations<8))
+      return true;
+  }
+  return false;
+}
+
+
+
+void progress_bar(float progress, std::string msg)
+{
+    int barWidth = 70; 
+    std::cout << msg << " ["; 
+    int pos = barWidth * progress; 
+    for (int i = 0; i < barWidth; ++i) { 
+            if (i < pos) std::cout << "="; 
+            else if (i == pos) std::cout << ">"; 
+            else std::cout << " "; 
+    } 
+    std::cout.precision(2);
+    std::cout << "] " << progress * 100.0 << " %\r"; 
+    std::cout.flush(); 
+}
+
+
 
 int main(int argc, char* argv[])
 {
 //*****************************************************************************
 ////// Input ////////////////////////////////////////////////////////////////// 
 //*****************************************************************************
+    gROOT->SetBatch( 1 );
     std::string foldername;
+    std::string method("sid");
+    std::string config;
+    std::string filter;
     unsigned int nTimesteps;
     unsigned int nIterations;
     unsigned int nSectors;
-    int nsideOut,index;
+    int nsideOut;
+    int index;
+    bool sundp;
+    bool show_progress;
     double lon;
     double lat;
     double elogmin, elogmax, rloglmax,ldirmin,ndirmin;
+    double slogmin, slogmax;
     std::vector< std::string > input;
     std::string coords = "Azimuth/ Zenith";
     int nEvents = 0;
@@ -91,14 +138,21 @@ int main(int argc, char* argv[])
              ("help", "produce help message") 
              ("input", po::value<std::vector <std::string> >(&input)->multitoken(), "Input files") 
              ("outdir", po::value<std::string>(&foldername)->default_value("./sample/"), "Directory of output") 
-             ("index", po::value<int>(&index)->default_value(0), "file index") 
+             ("index", po::value<int>(&index)->default_value(0), "file index")
              ("spline", po::value<string>(), "File containing spline tables")
-             ("elogmin", po::value<double>(&elogmin)->default_value(0), "Minimum energy")
-             ("elogmax", po::value<double>(&elogmax)->default_value(0), "Maximum energy (0: no cut)")
+             ("elogmin", po::value<double>(&elogmin)->default_value(0), "Minimum log energy (GeV)")
+             ("elogmax", po::value<double>(&elogmax)->default_value(0), "Maximum log energy (GeV) (0: no cut)")
+             ("slogmin", po::value<double>(&slogmin)->default_value(0), "Minimum logS125")
+             ("slogmax", po::value<double>(&slogmax)->default_value(0), "Maximum logS125 (0: no cut)")
              ("ldirc_min", po::value<double>(&ldirmin)->default_value(0), "Minimum ldir (0: no cut)")
              ("ndirc_min", po::value<double>(&ndirmin)->default_value(0), "Minimum ndir (0: no cut)")
              ("rloglmax", po::value<double>(&rloglmax)->default_value(0), "Maximum rlogL (0: no cut)")
              ("nsideout", po::value<int>(&nsideOut)->default_value(256), "Healpix Nside for output map") 
+             ("sundp", po::bool_switch(&sundp)->default_value(false), "subtract solar dipole")
+             ("config", po::value<string>(&config), "Detector configuration") 
+             ("method", po::value<string>(&method), "Sidereal, Anti, Solar, Extended")
+             ("filter", po::value<string>(&filter), "Filter for IceTop data")
+             ("progress", po::bool_switch(&show_progress)->default_value(false), "show progress bar")
              ;
      
         //po::store(po::parse_command_line(argc, argv, desc),  vm); // can throw 
@@ -128,35 +182,44 @@ int main(int argc, char* argv[])
             return 2; 
     } 
  
+
 //*****************************************************************************
 ////// Initialize ///////////////////////////////////////////////////////////// 
 //*****************************************************************************
-//
-    fitshandle fitsOut;
-    stringstream namefits;
-    if (elogmin > 0 || elogmax > 0)
-            namefits << foldername << boost::format("/CR_ICECUBE_SIDEREAL_%4.2f-%4.2fGeV_NSIDE%d.%03d.fits.gz") % elogmin % elogmax % nsideOut % index;
-    else
-            namefits << foldername << boost::format("/CR_ICECUBE_SIDEREAL_NSIDE%d.%03d.fits.gz") % nsideOut % index;
+    const char* masterTree;
+    const char* triggerTree;
+    string detector = config.substr(0,2); 
+    if (detector == "IC") { 
+        masterTree = "CutDST"; 
+        triggerTree = "TDSTTriggers"; 
+    } 
+    if (detector == "IT") { 
+        masterTree = "master_tree"; 
+        triggerTree = "";   // Unused? Will probably break IT functionality...  
+    }
+
+
+
 
     // TFile f("Event.root");
-    TFile file(input[0].c_str());
+    TChain cutDST(masterTree);
+    for (unsigned i = 0; i < input.size(); ++i) { 
+        cutDST.Add(input[i].c_str()); 
+    } 
+    SimpleDST dst(&cutDST, config);
 
-    TTree* tree = (TTree*) file.Get("CutDST");
-    float LLHZenithDeg, LLHAzimuthDeg, RADeg, DecDeg, RLogL;
-    double ModJulDay, LocalMST;
-    UShort_t NChannels; 
-    UInt_t NDirHits, LDir;
 
-    tree->SetBranchAddress("ModJulDay", &ModJulDay);
-    tree->SetBranchAddress("LocalMST", &LocalMST);
-    tree->SetBranchAddress("LLHZenithDeg", &LLHZenithDeg);
-    tree->SetBranchAddress("LLHAzimuthDeg", &LLHAzimuthDeg);
-    tree->SetBranchAddress("RADeg", &RADeg);
-    tree->SetBranchAddress("DecDeg", &DecDeg);
-    tree->SetBranchAddress("NChannels", &NChannels);
-    tree->SetBranchAddress("NDirHits", &NDirHits);
-    tree->SetBranchAddress("LDir", &LDir);
+    TChain trigDST(triggerTree);
+    if (newConfig(config)) { 
+        for (unsigned i = 0; i < input.size(); ++i) { 
+            trigDST.Add(input[i].c_str()); 
+        }
+    } 
+    SimpleTrigger dst_trig(&trigDST);
+
+    cout << "Number of chained files: " << cutDST.GetNtrees() << endl; 
+    Long64_t nEntries = cutDST.GetEntries();
+
 
     // Read in spline tables if provided
     photospline::splinetable<> spline;
@@ -170,12 +233,12 @@ int main(int argc, char* argv[])
 
     unsigned int npix = 12*nsideOut*nsideOut; 
     unsigned int nTimeBins = 360;
+
+
     // Import data : n_tau_i
     SkyMapPtr mymap(new SkyMap); 
     mymap->SetNside(nsideOut, RING);     
     mymap->fill(0.);
-    log_info("Loaded " << input[0] << ", etc.");
-    log_info("output file: " << namefits.str() );
 
     // output directory
     fs::path dir(foldername); 
@@ -185,33 +248,80 @@ int main(int argc, char* argv[])
                     log_info("....successfully created !");
     }
 
-    float theta, phi;
+//*****************************************************************************
+////// Input ////////////////////////////////////////////////////////////////// 
+    fitshandle fitsOut;
+    stringstream namefits;
 
-    for (int i = 0, N = tree->GetEntries(); i < N; ++i) {
-       tree->GetEntry(i); 
+    log_info("Loaded " << input[0] << ", etc.");
+    log_info("output file: " << namefits.str() );
 
-       if ( (rloglmax > 0 ) && (RLogL > rloglmax) )
+    if (elogmin > 0 || elogmax > 0)
+            namefits << foldername << boost::format("/CR_ICECUBE_SIDEREAL_%4.2f-%4.2fGeV_NSIDE%d.%03d.fits.gz") % elogmin % elogmax % nsideOut % index;
+    else
+            namefits << foldername << boost::format("/CR_ICECUBE_SIDEREAL_NSIDE%d.%03d.fits.gz") % nsideOut % index;
+
+
+
+    double eventweight;
+    double weightsum = 0.;
+    float zenith, azimuth;
+
+    for (int i = 0; i < nEntries; ++i) {
+       cutDST.GetEntry(i); 
+       if (newConfig(config)) { 
+           trigDST.GetEntry(i); 
+       }
+ 
+       if ( show_progress && (i % 5000 == 0) ) 
+          progress_bar(i/float(nEntries), " Reading entries");
+
+       if ( (rloglmax > 0 ) && (dst.RLogL > rloglmax) )
           continue;
 
-       
-       //log_info("declination: " << DecDeg );
-       //if ( NDirHits < ndirmin ) 
-       if ( NDirHits < ndirmin*cos(LLHZenithDeg) ) 
+       double mjd = dst.ModJulDay;
+       double lst = GetGMST(mjd);
+       if (method == "anti") { 
+           lst = GetGMAST(mjd); 
+       } else if (method == "ext") { 
+           lst = GetGMEST(mjd);
+       } else if (method == "solar") {
+           lst= ( mjd - int(mjd) )* 24.; 
+       }
+ 
+
+       azimuth = dst.LLHAzimuthDeg/180.*M_PI; 
+       zenith = dst.LLHZenithDeg/180.*M_PI; 
+
+
+       if ( dst.NDirHits < ndirmin*cos(zenith) ) 
           continue;
 
-       //std::cout << "LDir= " << LDir << " ldirmin = " << ldirmin << std::endl;
-       //if ( LDir < ldirmin ) 
-       if ( LDir < ldirmin*cos(LLHZenithDeg) ) 
-          continue;
+       if ( dst.LDir < ldirmin*cos(zenith) ) 
+           continue;
 
-       theta = LLHZenithDeg/180.*M_PI; 
+       // Reconstruction cuts
+       if (!dst.isReco || zenith != zenith || azimuth != azimuth) 
+           continue;
 
-       if ((vm.count("spline")) && !ICenergyCut(NChannels, spline, theta, elogmin, elogmax))
-          continue;
+       // IceTop filter cut
+       if (vm.count("filter") && !filterCut(vm, dst))
+           continue;
 
-       phi = RADeg/180.*M_PI; 
-       theta = (90-DecDeg)/180.*M_PI; 
-       pointing pt(theta, phi);
+       // Energy cuts for IceTop and IceCube
+       if (detector == "IT" && !ITenergyCut(dst, elogmin,elogmax)) 
+           continue;
+
+       if (vm.count("spline") && !ICenergyCut(dst, spline, zenith, elogmin, elogmax))
+           continue;
+
+
+       Direction dir(zenith,azimuth);
+       Equatorial eq = GetEquatorialFromDirection(dir, mjd);
+
+       double phi = eq.ra; 
+       double theta = constants::pi-eq.dec;
+       pointing pt(zenith, azimuth);
 
        int j = mymap->ang2pix(pt);
        (*mymap)[j] += 1.0; 
@@ -232,3 +342,14 @@ int main(int argc, char* argv[])
     fitsOut.close();
     
 }
+
+bool newConfig(string config) {
+
+  if (config=="IC86-2011" || config=="IC86-2012" || config=="IC86-2013" || 
+      config=="IC86-2014" || config=="IC86-2015") {
+    return false;
+  }
+  return true;
+}
+
+

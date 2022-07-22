@@ -16,25 +16,32 @@
 #  
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>
-#  
-TOOLDEF (cfitsio
+#
+
+tooldef(erfa
   include
-  fitsio.h
+  erfa.h
   lib
   NONE
-  cfitsio
+  erfa
+)
+
+TOOLDEF (pal
+  include
+  star/pal.h
+  lib
+  NONE
+  pal
   )
 
-## for Fedora...
-if(NOT CFITSIO_FOUND)
-TOOLDEF (cfitsio
+# Debian packages this as starlink-pal
+if (NOT PAL_FOUND)
+TOOLDEF (pal
   include
-  cfitsio/fitsio.h
+  star/pal.h
   lib
   NONE
-  cfitsio
-  )
-if(CFITSIO_FOUND)
-  set(CFITSIO_INCLUDE_DIR ${CFITSIO_INCLUDE_DIR}/cfitsio CACHE FILEPATH "cfitsio header path" FORCE)
-endif(CFITSIO_FOUND)
-endif(NOT CFITSIO_FOUND)
+  starlink_pal
+  ) 
+endif(NOT PAL_FOUND)
+

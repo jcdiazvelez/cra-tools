@@ -32,9 +32,17 @@ set(LIBS ${LIBS}
     ${PHOTOSPLINE_LIBRARIES} ) 
 
 
+add_executable(splinechk
+    private/splinechk.cc
+    )
+
+
+
 add_executable(make-local-maps
     private/make-local-maps.cc 
-    private/esplines.cc
+    private/cuts.cc
+    private/SimpleDST.cc
+    private/SimpleTrigger.cc
     private/pickle.cc
     private/solardipole.cc
     private/Direction.cxx
@@ -43,7 +51,8 @@ add_executable(make-local-maps
 
 add_executable(get_azimuth
     private/get_azimuth.cc
-    private/esplines.cc
+    private/cuts.cc
+    private/SimpleDST.cc
     private/pickle.cc
     )
 
@@ -51,8 +60,12 @@ add_executable(get_azimuth
 
 add_executable(make-sidereal-maps
     private/make-sidereal-maps.cc 
-    private/esplines.cc
+    private/cuts.cc
+    private/SimpleDST.cc
+    private/SimpleTrigger.cc
     private/pickle.cc
+    private/Direction.cxx
+    private/astro.cxx
     )
 add_executable(combine-local-maps
     private/combine-local-maps.cc 
@@ -61,18 +74,22 @@ add_executable(combine-local-maps
 
 add_executable(make-random-local-maps
     private/make-random-local-maps.cc
-    private/esplines.cc
+    private/cuts.cc
     private/pickle.cc
+    private/SimpleDST.cc
+    private/SimpleTrigger.cc
+    private/pickle.cc
+    private/solardipole.cc
+    private/Direction.cxx
+    private/astro.cxx
     )
 
 add_executable(fitq
-    private/esplines.cc
     private/pickle.cc
     private/fitq.cc
     )
 
 add_executable(fitd
-    private/esplines.cc
     private/pickle.cc
     private/fitd.cc
     )
@@ -95,16 +112,20 @@ add_executable(checksd
             private/checksd.cc
             private/solardipole.cc
             private/astro.cxx
-            private/time.cxx
-            private/SimpleTrigger.cc
-            private/SimpleDST.cc)
+            private/time.cxx)
 
 add_executable(tsmc
             private/tsmc.cxx
             private/solardipole.cc)
 
 
- 
+target_link_libraries(splinechk
+                ${CFITSIO_LIBRARIES} 
+                ${Boost_LIBRARIES} 
+                ${PHOTOSPLINE_LIBRARIES} photospline
+                )
+
+
 
 target_link_libraries(TimeScramble
                 ${PAL_LIBRARIES} 
@@ -118,9 +139,7 @@ target_link_libraries(checksd
                 ${PAL_LIBRARIES} 
                 ${CFITSIO_LIBRARIES} 
                 ${HEALPIX-CXX_LIBRARIES} 
-                ${Boost_LIBRARIES} 
-                ${PHOTOSPLINE_LIBRARIES}
-                ${ROOT_LIBRARIES})
+                ${Boost_LIBRARIES})
 
 target_link_libraries(tsmc
                 ${PAL_LIBRARIES} 
@@ -130,12 +149,33 @@ target_link_libraries(tsmc
                 ${PHOTOSPLINE_LIBRARIES} -lboost_log)
 
 
-target_link_libraries(make-local-maps ${PHOTOSPLINE_LIBRARIES} photospline ${HEALPIX-CXX_LIBRARIES} ${Boost_LIBRARIES} ${ROOT_LIBRARIES} ${PAL_LIBRARIES})
+target_link_libraries(make-local-maps 
+    ${PHOTOSPLINE_LIBRARIES} photospline 
+    ${HEALPIX-CXX_LIBRARIES} 
+    ${Boost_LIBRARIES} 
+    ${ROOT_LIBRARIES} 
+    ${PAL_LIBRARIES})
+
 target_link_libraries(get_azimuth ${PHOTOSPLINE_LIBRARIES} photospline ${HEALPIX-CXX_LIBRARIES} ${Boost_LIBRARIES} ${ROOT_LIBRARIES} )
+
 target_link_libraries(make-mc-hawc-local-maps ${PHOTOSPLINE_LIBRARIES} photospline ${HEALPIX-CXX_LIBRARIES} ${Boost_LIBRARIES} ${ROOT_LIBRARIES} )
-target_link_libraries(make-sidereal-maps ${PHOTOSPLINE_LIBRARIES} photospline ${HEALPIX-CXX_LIBRARIES} ${Boost_LIBRARIES} ${ROOT_LIBRARIES} )
+
+target_link_libraries(make-sidereal-maps 
+    ${PHOTOSPLINE_LIBRARIES} photospline 
+    ${HEALPIX-CXX_LIBRARIES} 
+    ${Boost_LIBRARIES} 
+    ${ROOT_LIBRARIES} 
+    ${PAL_LIBRARIES})
+
 target_link_libraries(combine-local-maps ${HEALPIX-CXX_LIBRARIES} ${Boost_LIBRARIES})
-target_link_libraries(make-random-local-maps ${PHOTOSPLINE_LIBRARIES} photospline ${HEALPIX-CXX_LIBRARIES} ${Boost_LIBRARIES} ${ROOT_LIBRARIES})
+
+target_link_libraries(make-random-local-maps 
+    ${PHOTOSPLINE_LIBRARIES} photospline 
+    ${HEALPIX-CXX_LIBRARIES} 
+    ${Boost_LIBRARIES} 
+    ${ROOT_LIBRARIES}
+    ${PAL_LIBRARIES})
+
 target_link_libraries(fitq ${PHOTOSPLINE_LIBRARIES} photospline ${HEALPIX-CXX_LIBRARIES} ${Boost_LIBRARIES} ${ROOT_LIBRARIES} -lMinuit)
 target_link_libraries(fitd ${PHOTOSPLINE_LIBRARIES} photospline ${HEALPIX-CXX_LIBRARIES} ${Boost_LIBRARIES} ${ROOT_LIBRARIES} -lMinuit)
 
@@ -159,6 +199,14 @@ configure_file(${CMAKE_SOURCE_DIR}/scripts/purge.py.in
 
 configure_file(${CMAKE_SOURCE_DIR}/scripts/submit_all.py.in
            ${CMAKE_BINARY_DIR}/scripts/submit_all.py
+           @ONLY)
+
+configure_file(${CMAKE_SOURCE_DIR}/scripts/make-local-maps.py.in
+           ${CMAKE_BINARY_DIR}/scripts/make-local-maps.py
+           @ONLY)
+
+configure_file(${CMAKE_SOURCE_DIR}/scripts/combine-local-maps.py.in
+           ${CMAKE_BINARY_DIR}/scripts/combine-local-maps.py
            @ONLY)
 
 if(IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/scripts)

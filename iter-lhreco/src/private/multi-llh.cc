@@ -714,8 +714,9 @@ int main(int argc, char* argv[])
                             nEvents += (*Nmap2[timeidx])[j];
                             nBkg    += norm2[timeidx]*Emap02[j]; 
                     }
-                } 
-                dataMap[i] = nEvents;
+                
+            } 
+            dataMap[i] = nEvents;
     } 
     
     //  write N_tau^(0), write A_i^(0)
@@ -734,8 +735,6 @@ int main(int argc, char* argv[])
     fitsOut.create(datamapname.str().c_str());
     write_Healpix_map_to_fits(fitsOut, dataMap, MyDTYPE);
     fitsOut.close();
-
-
 
     //*****************************************************************************
     ////// Iterate //////////////////////////////////////////////////////////////// 
@@ -785,7 +784,7 @@ int main(int argc, char* argv[])
             arr<double> weight(2*nsideOut);
             weight.fill(1.);
             
-	    // generate alm coefficients with terative map2alm method
+	        // generate alm coefficients with terative map2alm method
             const int numIter = 3;
             map2alm_iter( diffCRmap, alm, numIter, weight);
             for (unsigned int l=0; l < LMAX+1; l++)
@@ -920,6 +919,7 @@ int main(int argc, char* argv[])
                             //rotation from local to Equatorial (ra,dec) 
                             int j;
                             j = loc2eq_idx(i, timeidx, lat1, lon1, nTimesteps, CRmap);
+
                             // global significance 
                             if (Emap01[j]*norm01[timeidx] > 0.0 && Emap1[j]*norm1[timeidx] > 0.0) { 
                                     significancemap[i] += -2.0*(diffCRmap[i]+CRmap[i])*Emap1[j]*norm1[timeidx]; 
@@ -965,5 +965,3 @@ int main(int argc, char* argv[])
 
     return 0;
 }
-
-

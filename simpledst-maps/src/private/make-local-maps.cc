@@ -27,15 +27,16 @@
 #include <iter-lhreco-proj/pickle.h>
 #include "TFile.h"
 #include "TTree.h"
+#include "TROOT.h"
+#include <TChain.h>
 
-#include <photospline/splinetable.h>
-#include <photospline/bspline.h>
-#include "esplines.h"
+#include "cuts.h"
 
 #include <astro/astro.h>
 #include <astro/time.h>
 #include <Direction.h>
 #include <solardipole.h>
+#include <SimpleTrigger.h>
 
 namespace po = boost::program_options; 
 #define log_info(args...) cout << args << endl
@@ -47,6 +48,8 @@ using boost::format;
 
 typedef Healpix_Map<double> SkyMap; 
 typedef boost::shared_ptr<SkyMap> SkyMapPtr; // Map shared pointer
+
+bool newConfig(string config);
 
 double 
 Sum(const SkyMap& map,unsigned int npix) 
@@ -60,21 +63,62 @@ Sum(const SkyMap& map,unsigned int npix)
 }
 
 
+bool filterCut(po::variables_map vm, SimpleDST dst) {
+
+  string filter = vm["filter"].as<string>();
+  string config = vm["config"].as<string>();
+  if (filter=="STA3" && dst.isSTA3)
+    return true;
+  if (config=="IT59" || config=="IT73" || config=="IT81") {
+    if ((filter=="STA8" && dst.isSTA8) ||
+        (filter=="NotSTA8" && dst.isSTA3 && !dst.isSTA8))
+      return true;
+  }
+  if (config=="IT81-2012" || config=="IT81-2013") {
+    if ((filter=="STA8" && dst.nStations>=8) ||
+        (filter=="NotSTA8" && dst.isSTA3 && dst.nStations<8))
+      return true;
+  }
+  return false;
+}
+
+
+
+void progress_bar(float progress, std::string msg)
+{
+    int barWidth = 70; 
+    std::cout << msg << " ["; 
+    int pos = barWidth * progress; 
+    for (int i = 0; i < barWidth; ++i) { 
+            if (i < pos) std::cout << "="; 
+            else if (i == pos) std::cout << ">"; 
+            else std::cout << " "; 
+    } 
+    std::cout.precision(2);
+    std::cout << "] " << progress * 100.0 << " %\r"; 
+    std::cout.flush(); 
+}
 
 int main(int argc, char* argv[])
 {
 //*****************************************************************************
 ////// Input ////////////////////////////////////////////////////////////////// 
 //*****************************************************************************
+    gROOT->SetBatch( 1 );
     std::string foldername;
+    std::string method("sid");
+    std::string config;
+    std::string filter;
     unsigned int nTimesteps;
     unsigned int nIterations;
     unsigned int nSectors;
     int nsideOut;
     bool sundp;
+    bool show_progress;
     double lon;
     double lat;
     double elogmin, elogmax, rloglmax,ldirmin,ndirmin;
+    double slogmin, slogmax;
     std::vector< std::string > input;
     std::string coords = "Azimuth/ Zenith";
     int nEvents = 0;
@@ -91,13 +135,19 @@ int main(int argc, char* argv[])
              ("input", po::value<std::vector <std::string> >(&input)->multitoken(), "Input files") 
              ("outdir", po::value<std::string>(&foldername)->default_value("./sample/"), "Directory of output") 
              ("spline", po::value<string>(), "File containing spline tables")
-             ("elogmin", po::value<double>(&elogmin)->default_value(0), "Minimum energy")
-             ("elogmax", po::value<double>(&elogmax)->default_value(0), "Maximum energy (0: no cut)")
+             ("elogmin", po::value<double>(&elogmin)->default_value(0), "Minimum log energy (GeV)")
+             ("elogmax", po::value<double>(&elogmax)->default_value(0), "Maximum log energy (GeV) (0: no cut)")
+             ("slogmin", po::value<double>(&slogmin)->default_value(0), "Minimum logS125")
+             ("slogmax", po::value<double>(&slogmax)->default_value(0), "Maximum logS125 (0: no cut)")
              ("ldirc_min", po::value<double>(&ldirmin)->default_value(0), "Minimum ldir (0: no cut)")
              ("ndirc_min", po::value<double>(&ndirmin)->default_value(0), "Minimum ndir (0: no cut)")
              ("rloglmax", po::value<double>(&rloglmax)->default_value(0), "Maximum rlogL (0: no cut)")
              ("nsideout", po::value<int>(&nsideOut)->default_value(256), "Healpix Nside for output map") 
              ("sundp", po::bool_switch(&sundp)->default_value(false), "subtract solar dipole")
+             ("config", po::value<string>(&config), "Detector configuration") 
+             ("method", po::value<string>(&method), "Sidereal, Anti, Solar, Extended")
+             ("filter", po::value<string>(&filter), "Filter for IceTop data")
+             ("progress", po::bool_switch(&show_progress)->default_value(false), "show progress bar")
              ;
      
         //po::store(po::parse_command_line(argc, argv, desc),  vm); // can throw 
@@ -130,27 +180,40 @@ int main(int argc, char* argv[])
 //*****************************************************************************
 ////// Initialize ///////////////////////////////////////////////////////////// 
 //*****************************************************************************
+    const char* masterTree;
+    const char* triggerTree;
+    string detector = config.substr(0,2); 
+    if (detector == "IC") { 
+        masterTree = "CutDST"; 
+        triggerTree = "TDSTTriggers"; 
+    } 
+    if (detector == "IT") { 
+        masterTree = "master_tree"; 
+        triggerTree = "";   // Unused? Will probably break IT functionality...  
+    }
+
+
+
 
     // TFile f("Event.root");
-    TFile file(input[0].c_str());
+    TChain cutDST(masterTree);
+    for (unsigned i = 0; i < input.size(); ++i) { 
+        cutDST.Add(input[i].c_str()); 
+    } 
+    SimpleDST dst(&cutDST, config);
 
-    TTree* tree = (TTree*) file.Get("CutDST");
-    float LLHZenithDeg, LLHAzimuthDeg, RADeg, DecDeg, RLogL, RaSun, DecSun;
-    double ModJulDay, LocalMST;
-    UShort_t NChannels; 
-    UInt_t NDirHits, LDir;
 
-    tree->SetBranchAddress("ModJulDay", &ModJulDay);
-    tree->SetBranchAddress("LocalMST", &LocalMST);
-    tree->SetBranchAddress("LLHZenithDeg", &LLHZenithDeg);
-    tree->SetBranchAddress("LLHAzimuthDeg", &LLHAzimuthDeg);
-    tree->SetBranchAddress("RADeg", &RADeg);
-    tree->SetBranchAddress("DecDeg", &DecDeg);
-    tree->SetBranchAddress("RaSun", &RaSun);
-    tree->SetBranchAddress("DecSun", &DecSun);
-    tree->SetBranchAddress("NChannels", &NChannels);
-    tree->SetBranchAddress("NDirHits", &NDirHits);
-    tree->SetBranchAddress("LDir", &LDir);
+    TChain trigDST(triggerTree);
+    if (newConfig(config)) { 
+        for (unsigned i = 0; i < input.size(); ++i) { 
+            trigDST.Add(input[i].c_str()); 
+        }
+    } 
+    SimpleTrigger dst_trig(&trigDST);
+
+    cout << "Number of chained files: " << cutDST.GetNtrees() << endl; 
+    Long64_t nEntries = cutDST.GetEntries();
+
 
     // Read in spline tables if provided
     photospline::splinetable<> spline;
@@ -158,8 +221,6 @@ int main(int argc, char* argv[])
         string splineFile = vm["spline"].as<string>();
         spline.read_fits(splineFile.c_str());
     }
-
-
 
 
     unsigned int npix = 12*nsideOut*nsideOut; 
@@ -185,6 +246,7 @@ int main(int argc, char* argv[])
     }
 
     double eventweight;
+    double weightsum = 0.;
     float zenith, azimuth;
     int timeBin;
     int prevTimeBin = 0 ;
@@ -195,54 +257,84 @@ int main(int argc, char* argv[])
     bool init=false;
     SkyMapPtr tmp_map;
 
-    for (int i = 0, N = tree->GetEntries(); i < N; ++i) {
-       tree->GetEntry(i); 
 
-       if ( (rloglmax > 0 ) && (RLogL > rloglmax) )
+
+    cout << "Reading " << nEntries << " entries...\n";
+    cout << "spline " << vm.count("spline") << " elogmin"<< elogmin << " elogmax" << elogmax << std::endl;
+
+    for (int i = 0; i < nEntries; ++i) {
+       cutDST.GetEntry(i); 
+       if (newConfig(config)) { 
+           trigDST.GetEntry(i); 
+       }
+    
+       if ( show_progress && (i % 5000 == 0) ) 
+          progress_bar(i/float(nEntries), " Reading entries");
+
+       if ( (rloglmax > 0 ) && (dst.RLogL > rloglmax) )
           continue;
 
        
-       //std::cout << "NDirHits=" << NDirHits << " ndirmin = " << ndirmin << std::endl;
-       //if ( NDirHits < ndirmin ) 
-       //std::cout << "LDir= " << LDir << " ldirmin = " << ldirmin << std::endl;
-       //if ( LDir < ldirmin ) 
+       double mjd = dst.ModJulDay;
+       double lst = GetGMST(mjd);
+       if (method == "anti") { 
+           lst = GetGMAST(mjd); 
+       } else if (method == "ext") { 
+           lst = GetGMEST(mjd);
+       } else if (method == "solar") {
+           lst= ( mjd - int(mjd) )* 24.; 
+       }
+ 
 
-       currMJD = ModJulDay;
        // https://en.wikipedia.org/wiki/Time_in_Antarctica
-       timeBin = int( nTimeBins*LocalMST/24.0 ); 
+       timeBin = int( nTimeBins*lst/24.0 ); 
 
-       azimuth = LLHAzimuthDeg/180.*M_PI; 
-       //phi = RADeg/180.*M_PI; 
-       zenith = LLHZenithDeg/180.*M_PI; 
-       //theta = DecDeg/180.*M_PI; 
+       azimuth = dst.LLHAzimuthDeg/180.*M_PI; 
+       zenith = dst.LLHZenithDeg/180.*M_PI; 
 
-       if ( NDirHits < ndirmin*cos(zenith) ) 
+       if ( dst.NDirHits < ndirmin*cos(zenith) ) 
           continue;
 
+       if ( dst.LDir < ldirmin*cos(zenith) ) 
+           continue;
 
-       if ( LDir < ldirmin*cos(zenith) ) 
-          continue;
+       // Reconstruction cuts
+       if (!dst.isReco || zenith != zenith || azimuth != azimuth) 
+           continue;
+
+       // IceTop filter cut
+       if (vm.count("filter") && !filterCut(vm, dst))
+           continue;
+
+       // Energy cuts for IceTop and IceCube
+       if (detector == "IT" && !ITenergyCut(dst, elogmin,elogmax)) 
+           continue;
+
+       if (vm.count("spline") && !ICenergyCut(dst, spline, zenith, elogmin, elogmax))
+           continue;
+
+       if (detector == "IT" &&  !ITs125Cut(dst, slogmin,slogmax))
+           continue;
 
        
-       if ((vm.count("spline")) && !ICenergyCut(NChannels, spline, zenith, elogmin, elogmax))
-          continue;
-
        pointing pt(zenith, azimuth);
 
-       Direction dir(zenith,azimuth);
-       Equatorial eq = GetEquatorialFromDirection(dir, ModJulDay);
        eventweight = 1.0;
        if (sundp) { 
-           eventweight = solar_dipole(ModJulDay, eq.ra, eq.dec,true); 
+           Direction dir(zenith,azimuth);
+           Equatorial eq = GetEquatorialFromDirection(dir, mjd);
+
+           eventweight = solar_dipole(mjd, eq.ra, eq.dec,true); 
        }
+       weightsum += eventweight;
 
        tmp_map = Nmap[timeBin % 360];// make sure tsid < 360 deg
        int j = tmp_map->ang2pix(pt);
-       //(*tmp_map)[j] += 1.0; 
        (*tmp_map)[j] += eventweight; 
        nEvents++;
 
     }
+    std::cout << std::endl;
 
 
     for (unsigned int degbin=0;degbin< 360;degbin++) 
@@ -250,20 +342,34 @@ int main(int argc, char* argv[])
          fitshandle fitsOut;
          stringstream namefits;
          if (elogmin > 0 || elogmax > 0)
-            namefits << foldername << boost::format("/CR_ICECUBE_LOCAL_%4.2f-%4.2fGeV_NSIDE%d_degbin-%02d.fits.gz") % elogmin % elogmax % nsideOut % degbin;
+            namefits << foldername << boost::format("/CR_ICECUBE_LOCAL_%4.2f-%4.2fGeV_NSIDE%d_degbin-%03d.fits.gz") % elogmin % elogmax % nsideOut % degbin;
          else
-            namefits << foldername << boost::format("/CR_ICECUBE_LOCAL_NSIDE%d_degbin-%02d.fits.gz") % nsideOut % degbin;
+            namefits << foldername << boost::format("/CR_ICECUBE_LOCAL_NSIDE%d_degbin-%03d.fits.gz") % nsideOut % degbin;
          if (fs::exists(namefits.str()) ) { 
                  fs::remove(namefits.str() ); 
          }
+         SkyMap jmap = *(Nmap[degbin]);
+         std::cout << "bin: " << degbin << " events: "<< Sum(jmap,npix) << " ";
          std::cout << namefits.str() << std::endl;
          fitsOut.create(namefits.str().c_str());
          fitsOut.add_comment("Local Map");
 
-         SkyMap jmap = *(Nmap[degbin]);
          write_Healpix_map_to_fits(fitsOut, jmap, PLANCK_FLOAT64);
-         //write_Healpix_map_to_fits(fitsOut, jmap, FITSUTIL<double>::DTYPE);
          fitsOut.close();
     }
-    
+    std::cout << "passing rate: " << nEvents << "/" << nEntries << std::endl;
+    std::cout << "weightsum: " << weightsum << std::endl;
+
+   
 }
+
+bool newConfig(string config) {
+
+  if (config=="IC86-2011" || config=="IC86-2012" || config=="IC86-2013" || 
+      config=="IC86-2014" || config=="IC86-2015") {
+    return false;
+  }
+  return true;
+}
+
+

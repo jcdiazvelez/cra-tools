@@ -22,7 +22,7 @@ import os, stat, random
 def pysubmit(executable, jobID=None, outdir='/home/fmcnally/npx4',
               test=False, local=False, universe='vanilla',
               header=['#!/bin/bash'],
-              notification='never', sublines=None, condor_dag=None):
+              notification='never', sublines=None, priority=1, condor_dag=None):
 
     # Option for testing off cluster
     if test:
@@ -104,6 +104,7 @@ def pysubmit(executable, jobID=None, outdir='/home/fmcnally/npx4',
         "output = %s/npx4-out/%s.out" % (outdir, jobID),
         "error = %s/npx4-error/%s.error" % (outdir, jobID),
         "notification = %s" % notification,
+        "priority =%s" %priority,
         "queue"
     ]
     lines = [l+'\n' for l in lines]

@@ -22,6 +22,10 @@ class SimpleDST {
   Bool_t IsGoodLineFit;
   Float_t LLHAzimuthDeg;
   Float_t LLHZenithDeg;
+  Float_t RLogL;
+  UInt_t NDirHits; 
+  UInt_t LDir; 
+
   // IceTop parameters
   Double_t Azimuth;
   Double_t Zenith;
@@ -45,6 +49,10 @@ class SimpleDST {
   TBranch* b_isGoodLineFit;
   TBranch* b_LLHAzimuth;
   TBranch* b_LLHZenith;
+  TBranch* b_RLogL;
+  TBranch* b_NDirHits;
+  TBranch* b_LDir;
+
   //IceTop parameters
   TBranch* b_Azimuth;
   TBranch* b_Zenith;

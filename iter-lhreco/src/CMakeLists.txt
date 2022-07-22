@@ -1,75 +1,80 @@
-#set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-MESSAGE( STATUS "SOFTWARE_NAME: " ${SOFTWARE_NAME} )
-if (SOFTWARE_NAME STREQUAL "AERIE")
-   HAWC_PROJECT (iter-lhreco-proj CXX C)
+cmake_minimum_required(VERSION 3.0)
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -DBOOST_LOG_DYN_LINK")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
-   HAWC_ADD_LIBRARY (iter-lhreco-proj
-     HEADERS include/iter-lhreco-proj/*.h
-     SOURCES src/*.cc
-     USE_PROJECTS hawcnest data-structures rng-service aerie-io
-               astro-service detector-service rng-service track-fitter
-     USE_PACKAGES CFITSIO HEALPix ROOT Boost)
+project(iter-lhreco-proj CXX C)
 
-   HAWC_ADD_EXECUTABLE (reconstruct
-     SOURCES src/reconstruct.cc src/pickle.cc
-     USE_PROJECTS hawcnest data-structures detector-service 
-     USE_PACKAGES CFITSIO HEALPix Boost)
+include(pretty)
+include(config)
+include(tools)
+include(tooldef)
+include(CheckIncludeFile)
 
-   HAWC_ADD_EXECUTABLE (multi-llh
-     SOURCES src/multi-llh.cc src/pickle.cc
-     USE_PROJECTS hawcnest data-structures detector-service 
-     USE_PACKAGES CFITSIO HEALPix Boost)
+FIND_PACKAGE(HEALPIX REQUIRED)
+FIND_PACKAGE(CFITSIO REQUIRED)
+FIND_PACKAGE(Boost 1.36.0 COMPONENTS system filesystem program_options iostreams REQUIRED)
+#FIND_PACKAGE(ROOT)
+#FIND_PACKAGE(photospline REQUIRED)
+#FIND_PACKAGE(PAL)
 
-
-   HAWC_ADD_EXECUTABLE (significance
-     SOURCES src/significance.cc src/pickle.cc
-     USE_PROJECTS hawcnest
-     USE_PACKAGES CFITSIO HEALPix Boost)
+include_directories(
+                ${Boost_INCLUDE_DIR} 
+                ${CFITSIO_INCLUDE_DIRS} 
+                ${HEALPIX-CXX_INCLUDE_DIRS} include)
 
 
-   HAWC_ADD_EXECUTABLE (getevents
-     SOURCES src/getevents.cc 
-     USE_PROJECTS hawcnest
-     USE_PACKAGES CFITSIO HEALPix Boost)
 
-else (SOFTWARE_NAME STREQUAL "AERIE")
-        cmake_minimum_required(VERSION 2.8)
+set(LIBS ${LIBS} 
+    ${PAL_LIBRARIES} ${HEALPIX-CXX_LIBRARIES} 
+    ${CFITSIO_LIBRARIES} ${Boost_LIBRARIES} ) 
 
-        set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
-
-        project(iter-lhreco-proj CXX C)
-
-        include(CheckIncludeFile)
-
-        FIND_PACKAGE(HEALPIX REQUIRED)
-        FIND_PACKAGE(CFITSIO REQUIRED)
-        #FIND_PACKAGE(Boost REQUIRED)
-        FIND_PACKAGE(Boost COMPONENTS system filesystem program_options REQUIRED)
-
-        #foreach(library ${HEALPIX_LIBRARIES})
-        #  MESSAGE( STATUS "Boost libraries: " ${library} )
-        #endforeach(library $HEALPIX_LIBRARIES})
-
-        include_directories(${Boost_INCLUDE_DIR} ${HEALPIX_INCLUDE_DIRS} ${CFITSIO_INCLUDE_DIRS} include)
-        set(LIBS ${LIBS} ${HEALPIX_LIBRARIES} ${CFITSIO_LIBRARIES} ${Boost_LIBRARIES})
-        
-
-        add_executable(multi-llh
-            src/multi-llh.cc 
-            src/pickle.cc
+add_executable(multi-llh
+            private/multi-llh.cc 
+            private/pickle.cc
             )
-        add_executable(reconstruct
-            src/reconstruct.cc 
-            src/pickle.cc
+
+add_executable(illh-reco
+            private/illh-reco.cc 
+            private/pickle.cc
+            private/illh-utils.cc
             )
-        add_executable(significance
-            src/significance.cc 
-            src/pickle.cc)
+
+add_executable(illh-significance
+            private/illh-significance.cc 
+            private/pickle.cc)
 
 
 
-        target_link_libraries(multi-llh ${HEALPIX_LIBRARIES} ${Boost_LIBRARIES}) 
-        target_link_libraries(reconstruct ${HEALPIX_LIBRARIES} ${Boost_LIBRARIES})
-        target_link_libraries(significance ${HEALPIX_LIBRARIES} ${Boost_LIBRARIES})
+target_link_libraries(multi-llh 
+                ${CFITSIO_LIBRARIES} 
+                ${HEALPIX-CXX_LIBRARIES} 
+                ${Boost_LIBRARIES})
 
-endif (SOFTWARE_NAME STREQUAL "AERIE")
+
+target_link_libraries(illh-reco
+                ${CFITSIO_LIBRARIES} 
+                ${HEALPIX-CXX_LIBRARIES} 
+                ${Boost_LIBRARIES})
+
+target_link_libraries(illh-significance 
+                ${CFITSIO_LIBRARIES} 
+                ${HEALPIX-CXX_LIBRARIES} 
+                ${Boost_LIBRARIES})
+
+configure_file(${CMAKE_SOURCE_DIR}/scripts/illh-reco.py.in
+           ${CMAKE_BINARY_DIR}/scripts/illh-reco.py
+           @ONLY)
+
+if(IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/scripts)
+       exec_program(test ARGS -h ${CMAKE_BINARY_DIR}/scripts/npx4 -a -e ${CMAKE_BINARY_DIR}/scripts/npxi4
+            || ln -snf ${CMAKE_SOURCE_DIR}/scripts/npx4 ${CMAKE_BINARY_DIR}/scripts/npx4
+            OUTPUT_VARIABLE DEV_NULL)
+       install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/scripts
+         DESTINATION ${CMAKE_BINARY_DIR}/scripts
+         PATTERN ".svn" EXCLUDE
+         PATTERN ".git" EXCLUDE
+         PATTERN "*.py"
+         PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ)
+endif (IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/scripts)
+
+
