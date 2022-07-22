@@ -1,0 +1,27 @@
+#!/bin/sh
+
+# Just cleans, does not create: goodRuns.txt and badRuns.txt
+
+prefix="/home/fmcnally/npx4"
+
+echo cleaning successful runs...
+
+gvalue=0 # counter for good runs
+bvalue=0 # counter for bad runs
+
+exec<"${prefix}/cleaner/goodRuns.txt"
+while read line
+do
+  gvalue=`expr $gvalue + 1`;
+  rm ${prefix}/npx4-*/${line}.*
+done
+echo $gvalue successful runs removed
+
+exec<"${prefix}/cleaner/badRuns.txt"
+while read line
+do
+  bvalue=`expr $bvalue + 1`;
+done
+
+echo $bvalue bad runs detected
+

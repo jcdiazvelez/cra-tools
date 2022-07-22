@@ -1,0 +1,57 @@
+#!/usr/bin/env python
+
+# Uses badDays.txt to purge files potentially associated with bad days
+
+import argparse
+import glob
+import os
+
+import datetime as dt
+
+
+if __name__ == "__main__":
+
+    p = argparse.ArgumentParser()
+    p.add_argument('-c', '--config', dest='config',
+            help='Detector configuration to purge')
+    p.add_argument('--textFile', dest='textFile',
+            default='@CRA_BUILD@/resources/badDays.txt',
+            help='File containing information on bad days')
+    p.add_argument('-p', '--purge', dest='purge',
+            default=False, action='store_true',
+            help='Actually remove the files')
+    p.add_argument('-m', '--mapsDir', dest='mapsDir',
+            default='/data/user/fmcnally/anisotropy/maps',
+            help='Directory with maps')
+
+    args = p.parse_args()
+
+    # Extract all bad run files
+    with open(args.textFile, 'r') as f:
+        badLines = f.readlines()
+    badLines = sorted([l.strip() for l in badLines if '.root' in l])
+
+    # Parse bad files for dates
+    dates = [l.split('_')[-3] for l in badLines]
+    all_dates = []
+    for d in dates:
+        t0 = dt.datetime.strptime(d, '%Y-%m-%d')
+        all_dates += [(t0 + dt.timedelta(days=-1)).strftime('%Y-%m-%d')]
+        all_dates += [(t0 + dt.timedelta(days=1)).strftime('%Y-%m-%d')]
+    all_dates += dates
+    all_dates = sorted(set(all_dates))
+        
+    # Compile list of all map files
+    prefix = f'{args.mapsDir}/{args.config}'
+    masterList = sorted(glob.glob(f'{prefix}/*.fits'))
+    rmList = [f for f in masterList if any([d in f for d in all_dates])]
+
+    if not args.purge:
+        print(f'This will remove {len(rmList)} files. Use "-p" option to force')
+        for f in sorted(rmList):
+            print(f)
+
+    if args.purge:
+        print(f'Removing {len(rmList)} files...')
+        for f in rmList:
+            os.remove(f)

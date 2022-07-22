@@ -28,6 +28,8 @@ set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR}/lib)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin)
 ## this is our flag, but in the above style
 set(DOXYGEN_OUTPUT_PATH ${CMAKE_BINARY_DIR}/docs/doxygen)
+set(CRA_SRC ${CMAKE_SOURCE_DIR})
+set(CRA_BUILD ${CMAKE_BINARY_DIR})
 
 #
 #  Check build sanity

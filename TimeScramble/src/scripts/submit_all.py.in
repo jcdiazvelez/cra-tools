@@ -1,0 +1,56 @@
+#!/usr/bin/env python
+
+import os, argparse
+
+if __name__ == "__main__":
+
+    p = argparse.ArgumentParser(
+            description='Submit TimeScramble jobs to cluster')
+
+    # General parameters
+    p.add_argument('-c', '--config', dest='config',
+            help='Detector configuration [IC86-2011,IC86-2012,IC86-2013...]')
+    p.add_argument('--sd', dest='sd',
+            default=False, action='store_true',
+            help='Correct for solar dipole on event-by-event basis')
+    p.add_argument('--no-sd2', dest='sd2',
+            default=True, action='store_false',
+            help='skip 2nd order function if applying solar dipole correction')
+
+    # Additional options
+    p.add_argument('-o', '--outDir', dest='outDir',
+            # CHANGE: suggested path: /data/user/[username]/maps
+            default='@CRA_BUILD@/maps',
+            help='Destination directory for output files')
+    p.add_argument('--splinepath', dest='splinepath',
+            default='/data/user/fmcnally/anisotropy/sim/IC86_20904_hist_spline.fits', 
+            help='Path to spline files')
+    p.add_argument('--cvmfs', dest='cvmfs',
+            default='/cvmfs/icecube.opensciencegrid.org/py3-v4.2.1/',
+            help='CVMFS environment')
+    p.add_argument('--submit_dir', dest='submit_dir',
+            default='@CRA_BUILD@/submit-dir',
+            help='submit directory')
+
+    args = p.parse_args()
+
+
+    configs = ['IC86-{}'.format(yy) for yy in range(2011,2021)]
+    methods = ['sid', 'anti', 'ext', 'solar']
+
+    ex = '@CRA_BUILD@/scripts/public_maker.py -c {} -m {} -o {} --splinepath {} --cvmfs {} --submit_dir {}'
+
+    if args.sd:
+        ex += ' --sd '
+    if not args.sd2:
+        ex += ' --no-sd2 '
+
+    for c in configs:
+        for m in methods:
+            print(f'\nWorking on {c} {m}')
+            #print(ex.format(c, m, args.outDir, args.splinepath, args.cvmfs, args.submit_dir))
+            os.system(ex.format(c, m, args.outDir, args.splinepath, args.cvmfs, args.submit_dir))
+
+        print(f'\nWorking on {c} ebins')
+        #print(ex.format(c, 'sid', args.outDir, args.splinepath, args.cvmfs, args.submit_dir) + ' --ebins')
+        os.system(ex.format(c, 'sid', args.outDir, args.splinepath, args.cvmfs, args.submit_dir) + ' --ebins')

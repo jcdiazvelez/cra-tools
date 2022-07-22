@@ -83,11 +83,29 @@ target_link_libraries(tsmc
                 ${PHOTOSPLINE_LIBRARIES} -lboost_log)
 
 
+configure_file(${CMAKE_SOURCE_DIR}/scripts/maker.py.in
+           ${CMAKE_BINARY_DIR}/scripts/maker.py
+           @ONLY)
+
+configure_file(${CMAKE_SOURCE_DIR}/scripts/missingFiles.py.in
+           ${CMAKE_BINARY_DIR}/scripts/missingFiles.py
+           @ONLY)
+
+configure_file(${CMAKE_SOURCE_DIR}/scripts/public_maker.py.in
+           ${CMAKE_BINARY_DIR}/scripts/public_maker.py
+           @ONLY)
+
+configure_file(${CMAKE_SOURCE_DIR}/scripts/purge.py.in
+           ${CMAKE_BINARY_DIR}/scripts/purge.py
+           @ONLY)
+
+configure_file(${CMAKE_SOURCE_DIR}/scripts/submit_all.py.in
+           ${CMAKE_BINARY_DIR}/scripts/submit_all.py
+           @ONLY)
 
 if(IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/scripts)
-    
-       exec_program(test ARGS -h ${CMAKE_BINARY_DIR}/scripts -a -e ${CMAKE_BINARY_DIR}/scripts
-            || ln -snf ${CMAKE_SOURCE_DIR}/scripts ${CMAKE_BINARY_DIR}/scripts
+       exec_program(test ARGS -h ${CMAKE_BINARY_DIR}/scripts/npx4 -a -e ${CMAKE_BINARY_DIR}/scripts/npxi4
+            || ln -snf ${CMAKE_SOURCE_DIR}/scripts/npx4 ${CMAKE_BINARY_DIR}/scripts/npx4
             OUTPUT_VARIABLE DEV_NULL)
        install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/scripts
          DESTINATION ${CMAKE_BINARY_DIR}/scripts

@@ -22,7 +22,7 @@ import os, stat, random
 def pysubmit(executable, jobID=None, outdir='/home/fmcnally/npx4',
               test=False, local=False, universe='vanilla',
               header=['#!/bin/bash'],
-              notification='never', sublines=None):
+              notification='never', sublines=None, condor_dag=None):
 
     # Option for testing off cluster
     if test:
@@ -38,7 +38,7 @@ def pysubmit(executable, jobID=None, outdir='/home/fmcnally/npx4',
     # Ensure output directories exist
     if not os.path.isdir(outdir):
         os.mkdir(outdir)
-    for condorOut in ['execs','logs','out','error']:
+    for condorOut in ['execs','logs','out','error','submit']:
         if not os.path.isdir('%s/npx4-%s' % (outdir, condorOut)):
             os.mkdir('%s/npx4-%s' % (outdir, condorOut))
 
@@ -114,8 +114,14 @@ def pysubmit(executable, jobID=None, outdir='/home/fmcnally/npx4',
         for l in sublines:
             lines.insert(-1, '%s\n' % l)
 
-    condor_script = '%s/2sub.sub' % outdir
+    condor_script = '%s/npx4-submit/%s.condor' % (outdir, jobID)
     with open(condor_script, 'w') as f:
         f.writelines(lines)
 
-    os.system('condor_submit %s' % condor_script)
+    if condor_dag:
+        with open(condor_dag, 'a') as f:
+            f.writelines([
+                "JOB D{} {}\n".format(jobID,condor_script), 
+                "Retry D{} 3\n".format(jobID)])
+    else:
+        os.system('condor_submit %s' % condor_script)

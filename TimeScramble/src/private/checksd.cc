@@ -123,7 +123,6 @@ int main(int argc, char* argv[]) {
                             minra*rad2deg,mindec*rad2deg, sundr*rad2deg, sundd*rad2deg, theta*rad2deg,
                             maxra1*rad2deg,maxdec1*rad2deg );
 
-
     
   }
   
