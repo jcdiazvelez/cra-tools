@@ -89,7 +89,7 @@ SimpleDST::SetupChain(TChain* chain, std::string config)
     chain->SetBranchAddress("time", &time, &b_time);
     chain->SetBranchAddress("zenith", &zenith, &b_zenith);
     chain->SetBranchAddress("azimuth", &azimuth, &b_azimuth);
-    chain->SetBranchAddress("value", &value, &b_value);
+    chain->SetBranchAddress("value", &numStat, &numStat);
   } 
     
 
