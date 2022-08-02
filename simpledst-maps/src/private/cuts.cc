@@ -60,7 +60,11 @@ int ITs125Cut(SimpleDST dst, double smin, double smax) {
 
 }
 
-
+int ITstats(Simble DST dst, double loen, double hien) {
+  //low energy is 3<numStat<8
+  //high energy is 8<numStat
+  //how to separate these into bins???
+  //double stations = (dst.numStat 
 
 
 
