@@ -30,5 +30,5 @@ int ITs125Cut(SimpleDST dst, double smin, double smax);
  *  GB IceTop stations cut --> low and high
  *
  */
-int ITstats(Simble DST dst);
+int ITstats(Simble DST dst, double loen, double hien);
 #endif //
