@@ -70,6 +70,7 @@ SimpleDST::SetupChain(TChain* chain, std::string config)
       chain->SetBranchAddress("FilterMask.IceTopSTA3_InIceSMT_09", 
               &isSTA3ii, &b_isSTA3ii);
     }
+    
 
     // ShowerLLH values
     chain->SetBranchAddress("ShowerLLH_proton.energy", &pEnergy, &b_pEnergy);
@@ -82,6 +83,15 @@ SimpleDST::SetupChain(TChain* chain, std::string config)
     chain->SetBranchAddress("LaputopSmallShowerParams.s125", &ss125, &b_ss125);
 
   }
+  
+  // GB IceTop config -- value is NStations
+  if (config == "IT-GB"){
+    chain->SetBranchAddress("time", &time, &b_time);
+    chain->SetBranchAddress("zenith", &zenith, &b_zenith);
+    chain->SetBranchAddress("azimuth", &azimuth, &b_azimuth);
+    chain->SetBranchAddress("value", &value, &b_value);
+  } 
+    
 
 }
 
