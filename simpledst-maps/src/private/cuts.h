@@ -25,3 +25,10 @@ int ITenergyCut(SimpleDST dst, double emin, double emax);
  */
 int ITs125Cut(SimpleDST dst, double smin, double smax);
 #endif // ESPLINES
+
+/**
+ *  GB IceTop stations cut --> low and high
+ *
+ */
+int ITstats(Simble DST dst);
+#endif //
