@@ -64,7 +64,10 @@ int ITstats(Simble DST dst, double loen, double hien) {
   //low energy is 3<numStat<8
   //high energy is 8<numStat
   //how to separate these into bins???
-  //double stations = (dst.numStat 
+  double stations = (dst.numStat >= 8) ? dst.s124 : dst.ss125;
+  double logstations = log10(stations);
+  
+  // correct?
 
 
 
