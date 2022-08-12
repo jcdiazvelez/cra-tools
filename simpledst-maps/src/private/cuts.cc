@@ -60,14 +60,16 @@ int ITs125Cut(SimpleDST dst, double smin, double smax) {
 
 }
 
-int ITNstatCut(Simble DST dst, double emin, double emax) {
+int ITNstatCutmin(Simble DST dst, double emin, double emax) {
   //low energy is 3<numStat<8
-  //high energy is 8<numStat
-  //how to separate these into bins???
-  double stations = (dst.numStat >= 8) ? dst.s124 : dst.ss125;
-  double logstations = log10(stations);
+  double stations = dst.numStat
+  return ((stations >= emin) && (stations<= emax));
   
-  // correct?
+}
+          
+int ITNstatCutmin(Simble DST dst, double emin, double emax) {
+  //high energy is 8<numStat
+  double stations = dst.numStat
+  return (stations>=emax); 
 
-
-
+}
