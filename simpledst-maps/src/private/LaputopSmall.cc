@@ -11,8 +11,8 @@ LaputopSmall::SetupChain(TChain* chain, std::string config)
   if (detector == "ITpass2") {
 
     chain->SetBranchAddress("time", &time, &b_time);
-    chain->SetBranchAddress("Zenith", &zenith, &b_zenith);
-    chain->SetBranchAddress("Azimuth", &azimuth, &b_azimuth);
+    chain->SetBranchAddress("zenith", &Zenith, &b_Zenith);
+    chain->SetBranchAddress("azimuth", &Azimuth, &b_Azimuth);
   }
 
 }
