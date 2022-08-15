@@ -67,7 +67,7 @@ int ITNstatCutmin(Simble DST dst, double emin, double emax) {
   
 }
           
-int ITNstatCutmin(Simble DST dst, double emin, double emax) {
+int ITNstatCutmax(Simble DST dst, double emin, double emax) {
   //high energy is 8<numStat
   double stations = dst.numStat
   return (stations>=emax); 
