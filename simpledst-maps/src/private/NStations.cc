@@ -10,7 +10,7 @@ NStations::SetupChain(TChain* chain, std::string config)
 
   if (detector == "ITpass2") {
 
-    chain->SetBranchAddress("nStations", &value, &b_value);
+    chain->SetBranchAddress("value", &nStations, &b_nStations);
   }
 
 }
