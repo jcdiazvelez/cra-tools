@@ -85,11 +85,11 @@ SimpleDST::SetupChain(TChain* chain, std::string config)
   }
   
   // GB IceTop config -- value is NStations
-  if (config == "IT-GB"){
+  if (config == "ITpass2"){
     chain->SetBranchAddress("time", &time, &b_time);
-    chain->SetBranchAddress("zenith", &zenith, &b_zenith);
-    chain->SetBranchAddress("azimuth", &azimuth, &b_azimuth);
-    chain->SetBranchAddress("value", &numStat, &numStat);
+    chain->SetBranchAddress("zenith", &Zenith, &b_Zenith);
+    chain->SetBranchAddress("azimuth", &Azimuth, &b_Azimuth);
+    chain->SetBranchAddress("value", &nStations, &b_nStations);
   } 
     
 
