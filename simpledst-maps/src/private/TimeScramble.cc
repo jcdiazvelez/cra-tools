@@ -48,6 +48,8 @@ int ITs125Cut(po::variables_map vm, SimpleDST dst, vector<float> sbins);
 //int ICenergyCut(po::variables_map vm, SimpleDST dst, struct splinetable table, double zenith, vector<float> ebins);
 int ICenergyCut(po::variables_map vm, SimpleDST dst, photospline::splinetable<> &table, double zenith, vector<float> ebins);
 
+//need to add LaputopSmall lap and NStations nstat here
+
 int main(int argc, char* argv[]) {
 
   po::options_description desc("Allowed options");
@@ -230,14 +232,21 @@ void tScramble(po::variables_map vm, vector<string> inFiles_) {
 
   const char* masterTree;
   const char* triggerTree;
+  const char* stationTree;
   if (detector == "IC") {
     masterTree = "CutDST";
     triggerTree = "TDSTTriggers";
+    stationTree = "";
   }
   if (detector == "IT") {
     masterTree = "master_tree";
     triggerTree = "";   // Unused? Will probably break IT functionality...
+    stationTree = "";
   }
+  if (detector == "ITpass2") {
+    masterTree = "LaputopSmall";
+    stationTree = "NStations";
+    triggerTree = "";
 
   // Initialize the chain and read data
   TChain *cutDST = new TChain(masterTree);
@@ -353,6 +362,9 @@ void tScramble(po::variables_map vm, vector<string> inFiles_) {
       zenith = dst.Zenith;
       azimuth = dst.Azimuth;
     }
+    if (detector == "ITpass2") {
+      zenith = lap.Zenith;
+      azimuth = lap.Azimuth;
 
     // SimpleDST cuts (automatically included in Segev-processed files)
     // First: throw away reconstructions too close to poles
