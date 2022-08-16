@@ -362,9 +362,6 @@ void tScramble(po::variables_map vm, vector<string> inFiles_) {
       zenith = dst.Zenith;
       azimuth = dst.Azimuth;
     }
-    if (detector == "ITpass2") {
-      zenith = lap.Zenith;
-      azimuth = lap.Azimuth;
 
     // SimpleDST cuts (automatically included in Segev-processed files)
     // First: throw away reconstructions too close to poles
