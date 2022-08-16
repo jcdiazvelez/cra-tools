@@ -1,5 +1,7 @@
 #include <SimpleDST.h>
 #include <SimpleTrigger.h>
+#include <LaputopSmall.h>
+#include <NStations.h>
 
 #include <TChain.h>
 #include <TH1D.h>
