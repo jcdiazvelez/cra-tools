@@ -3,6 +3,7 @@
 import sys, os, glob, re, argparse
 import datetime as dt
 import random
+import subprocess
 
 #sys.path.append('/home/fmcnally/npx4')
 from npx4.pysubmit import pysubmit
@@ -12,23 +13,6 @@ INSTRUCTIONS: before executing, change hardcoded paths anywhere you see
 the word 'CHANGE'.
 """
 
-
-def getDSTfiles(config):
-
-    fpath = '/data/ana/CosmicRay/Anisotropy/IceCube/{}'.format(config)
-    fileList = glob.glob('{}/*.root'.format(fpath))
-    # Newer years have part files nested in daily folders
-    if fileList == []:
-        fileList = glob.glob('{}/*/*.root'.format(fpath))
-    return sorted(fileList)
-
-def getCustomDSTfiles(fpath):
-
-    fileList = glob.glob('{}/*.root'.format(fpath))
-    # Newer years have part files nested in daily folders
-    if fileList == []:
-        fileList = glob.glob('{}/*/*.root'.format(fpath))
-    return sorted(fileList)
 
 
 ## Special cases for binning in energy. Calling the flag
@@ -54,9 +38,12 @@ if __name__ == "__main__":
     p.add_argument('-d', '--dates', dest='dates', type=str,
             default=None, nargs='*',
             help='Dates to process [yyyymmdd] (optional, inclusive)')
-    p.add_argument('-i', '--inclusive', dest='inclusive',
+    p.add_argument('--inclusive', dest='inclusive',
             default=False, action='store_true',
             help='Treat two dates given as inclusive. Otherwise treat as list')
+    p.add_argument('--pedantic', dest='pedantic',
+            default=False, action='store_true',
+            help='Exit if a date or file are missing.')
     p.add_argument('--sd', dest='sundp',
             default=False, action='store_true',
             help='Correct for solar dipole on event-by-event basis')
@@ -68,7 +55,9 @@ if __name__ == "__main__":
 
     # Additional options
     p.add_argument('-o', '--outdir', dest='outdir',
-            # CHANGE: suggested path: /data/user/[username]/maps
+            default='@CRA_BUILD@/maps',
+            help='Destination directory for output files')
+    p.add_argument('-i', '--indir', dest='indir',
             default='@CRA_BUILD@/maps',
             help='Destination directory for output files')
     p.add_argument('--test', dest='test',
@@ -77,19 +66,16 @@ if __name__ == "__main__":
     p.add_argument('--overwrite', dest='overwrite',
             default=False, action='store_true',
             help='Option to overwrite existing map files')
-    p.add_argument('--splinepath', dest='splinepath',
-            default='/data/user/fmcnally/anisotropy/sim/IC86_20904_hist_spline.fits', 
-            help='Path to spline files')
     p.add_argument('--cvmfs', dest='cvmfs',
             default='@CVMFS_SROOTBASE@',
             help='CVMFS environment')
     p.add_argument('--submit_dir', dest='submit_dir',
             default='@CRA_BUILD@/submit-dir',
             help='submit directory')
-    p.add_argument('--elogmax', dest='elogmax',
+    p.add_argument('--elogmax', dest='elogmax',type=float,
             default=4.5,
             help='max log energy/GeV')
-    p.add_argument('--elogmin', dest='elogmin',
+    p.add_argument('--elogmin', dest='elogmin',type=float,
             default=0.0,
             help='min log energy/GeV')
     p.add_argument('--ndirc_min', dest='ndirc_min',
@@ -104,9 +90,6 @@ if __name__ == "__main__":
     p.add_argument('--nside', dest='nsideout',
             default=64,
             help='Healpix NSide parameter')
-    p.add_argument('--condor-priority', dest='priority',
-            default=1, 
-            help='Job priority in condor')
     ### USER-SPECIFIC PATHS (CHANGE) ###
     """ These paths all refer to directories. Make sure you create your
     own directories as needed """
@@ -117,18 +100,18 @@ if __name__ == "__main__":
 
     args = p.parse_args()
     c_opts = vars(args).copy()
+    s_opts = vars(args).copy()
     if not args.config:
         p.error('Detector configuration not given')
 
-
-    # Default spline files
-    c_opts['spline'] = args.splinepath
-
     # Base name for outfiles
     outBase = '{outdir}/{config}'.format(**c_opts)
+    inBase = '{indir}/{config}'.format(**c_opts)
     if args.sundp:
        outBase += '_sd'
+       inBase += '_sd'
     c_opts['outBase'] = outBase
+    c_opts['inBase'] = inBase
 
     # Create output directories if they don't already exist
     if not os.path.isdir('{outBase}'.format(**c_opts)):
@@ -136,7 +119,6 @@ if __name__ == "__main__":
         os.makedirs('{outBase}'.format(**c_opts))
 
     # Create list of desired dates
-    runDates = []
     if args.dates != None and not args.inclusive:
         runDates = ['{}-{}-{}'.format(d[:4],d[4:6],d[6:8]) for d in args.dates]
     if args.dates != None and args.inclusive:
@@ -148,51 +130,10 @@ if __name__ == "__main__":
         runDates = [sdate + dt.timedelta(days=i) for i in range(delta.days+1)]
         runDates = [date.strftime('%Y-%m-%d') for date in runDates]
 
-    # Collect input files
-    fileList = []
-    masterList = getDSTfiles(args.config)
-    for rootFile in masterList:
-
-        # Filter by desired dates
-        date = re.findall('\d{4}-\d{2}-\d{2}', rootFile)[-1]
-        if (args.dates != None) and (date not in runDates):
-            continue
-
-        # Apply naming conventions to find existing files
-        testFiles = [outBase]
-        if args.ebins:
-            testFiles = ['%s_%s-%sGeV' % (f, args.ebins[i], args.ebins[i+1]) \
-                    for i in range(len(args.ebins)-1) for f in testFiles]
-        testFiles = ['%s_%s.fits' % (f, date) for f in testFiles]
-
-        # Overwrite or omit existing files
-        # Files for bins are all created at once - only omit if all exist
-        if all([os.path.isfile(f) for f in testFiles]) and not args.overwrite:
-            continue
-        for testFile in testFiles:
-            if os.path.isfile(testFile):
-                os.remove(testFile)
-
-        fileList.append(rootFile)
-
-    # Split into days for submission
-    dateList = [re.findall('\d{4}-\d{2}-\d{2}', f)[-1] for f in fileList]
-    dateList = sorted(list(set(dateList)))  # Limit to unique values
-
-    # Collect surrounding files to allow runs from midnight to midnight
-    # ("Daily" files grouped by run, not actually 24 hours)
-    dayFiles = []
-    for day in dateList:
-        dayFiles += [[f for f in masterList if (day in f) ]]
-
-    dayFiles = [' '.join(oneDay)+'\n' for oneDay in dayFiles]
-    if args.test:
-        dayFiles = dayFiles[:1]
-        dateList = dateList[:1]
 
     # Set up parameters to feed C++ script
     print('Parameters for submission:')
-    validArgs  = ['config','ndirc_min','ldirc_min','elogmax','elogmin','rloglmax','spline','nsideout']
+    validArgs  = ['nsideout']
     c_opts = {k:v for k,v in c_opts.items() if v!=None and k in validArgs}
     for key in sorted(c_opts.keys()):
         print('  --%s %s' % (key, c_opts[key]))
@@ -200,42 +141,80 @@ if __name__ == "__main__":
     # Python magic: flatten list of arbitrary depth into list of strings
     flatList = lambda *n: (str(e) for a in n \
             for e in (flatList(*a) if isinstance(a, (tuple, list)) else (a,)))
-    c_opts = ' '.join(list(flatList(c_opts)))
+    #c_opts = ' '.join(list(flatList(c_opts)))
+    c_opts = list(flatList(c_opts))
     # Ebins need to go last (multitoken parameters)
-    if args.sundp:
-        print('  --sundp')
-        c_opts += ' --sundp'
 
-    # Increase requested memory for jobs that produce multiple maps
-    ## NOTE: exceeded memory limit (1000 MB) with single day.
-    ## Don't remember this being a problem, changing from double to float
-    ## does *not* fix it :(
-    ## Appears to cap out around 2500 MB
     sublines = ["request_memory = 3000"]
-    if args.ebins:
-        sublines = ["request_memory = 6000"]
-
     # Environment for script
     header = ['#!/bin/bash ']
     if args.cvmfs:
         header = ['#!/bin/sh','eval `' +args.cvmfs +'/setup.sh`']
 
     # Submit files
-    print('Submitting %i files...' % len(dayFiles))
     if not os.path.isdir(args.submit_dir):
         os.makedirs(args.submit_dir)
-    for i in range(len(dayFiles)):
+    if not os.path.isdir('{}/combined'.format(outBase)):
+        os.makedirs('{}/combined'.format(outBase))
 
-        jobID = 'makelocalmaps_%s_%05i_%05i' % (args.config, i, random.randint(0,99999))
-        cmd  = '@CRA_BUILD@/bin/make-local-maps' 
-        ex = [cmd, c_opts,'--outdir','{}/{}'.format(outBase,dateList[i]), '--input', dayFiles[i] ]
-        ex = ' '.join(ex)
-        print(ex)
+    shexec=''
+    infile_prefix = "CR_ICECUBE_LOCAL_{elogmin:.2f}-{elogmax:.2f}GeV_NSIDE{nsideout}_degbin-"
+    infile = infile_prefix+"{degbin:03d}.fits.gz"
+
+    for degbin in range(0,360):
+
+        # Filter by desired dates
+        if args.dates is None: 
+            print(os.path.join(inBase,"*",infile).format(**s_opts,degbin=degbin))
+            filelist = glob.glob(os.path.join(inBase,"*",infile).format(**s_opts,degbin=degbin))
+            if not filelist:
+                print("no input files found!:")
+                print(os.path.join(inBase,"*",infile).format(**s_opts,degbin=degbin))
+                os._exit(1)
+        else:
+            filelist = []
+            for date in runDates:
+                f = os.path.join(inBase,date,infile).format(**s_opts,degbin=degbin)
+                if os.path.exists(f):
+                    filelist.append(f)
+                elif args.pedantic:
+                    print("error:","file",f,"does not exist!")
+                    os._exit(1)
+                else:
+                    print("warning:", "file",f,"does not exist!")
+                    
+
+        outfile = infile.format(**s_opts,degbin=degbin)
+        jobID = 'combinelocalmaps_%s_%05i_%05i' % (args.config, degbin, random.randint(0,99999))
+        cmd  = '@CRA_BUILD@/bin/combine-local-maps' 
+        #ex = [cmd] + c_opts + ['--outfile','{}/combined/{}'.format(outBase,outfile), '--input', " ".join(filelist) ]
+        ex = [cmd] + c_opts + ['--outfile','{}/combined/{}'.format(outBase,outfile), '--input'] +filelist
+        #ex = [cmd, c_opts,'--outfile','{}/combined/{}'.format(outBase,outfile), '--input', " ".join(filelist) ]
+        print(' '.join(ex[0:10]),'...')
         print('')
-        os.makedirs('{}/{}'.format(outBase,dateList[i]))
-        pysubmit(ex, sublines=sublines, test=args.test, jobID=jobID,
+        shexec += ' '.join(ex)
+        shexec += ';\n'
+
+    reco_prefix = infile_prefix.format(**s_opts)
+    cmd  = '@CRA_BUILD@/../../iter-lhreco/build/bin/illh-reco'
+    ex  = [cmd, 
+        '--prefix','{}/combined/{}'.format(outBase,reco_prefix), 
+        '--suffix','.fits.gz',
+        '--outdir','{}/reco'.format(outBase),
+        '--lon','270',
+        '--lat','90',
+        '--detector','ICECUBE',
+        '--thetamax','75'
+        ]
+    shexec += '\n#Reconstruct;\n'
+    shexec += ' '.join(ex)
+    shexec += ';\n'
+
+    if not args.test:
+       pysubmit(shexec, sublines=sublines, test=args.test, jobID=jobID,
                 outdir=args.submit_dir,
-                header=header,
-                priority=args.priority,
-                condor_dag='{}/{}.make-local-maps.dag'.format(args.submit_dir,args.config)
+                header=header
                 )
+    else:
+       print(shexec)
+     

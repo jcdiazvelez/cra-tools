@@ -43,10 +43,8 @@ class SimpleDST {
   Double_t ss125;
  
  //GB IceTop parameters -- value is NStations
- Double_t azimuth;
- Double_t zenith;
- Double_t time;
- Int_t value;
+  Double_t time;
+  Int_t value;
 
   // Joint parameters
   TBranch* b_ModJulDay;
@@ -76,10 +74,7 @@ class SimpleDST {
   TBranch* b_ss125;
   
  //GB IceTop parameters -- value is NStations
- TBranch* b_azimuth;
- TBranch* b_zenith;
  TBranch* b_time;
- TBranch* b_value;
 
   void SetupChain(TChain* chain, std::string config);
 

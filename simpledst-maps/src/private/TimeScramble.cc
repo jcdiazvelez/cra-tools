@@ -1,8 +1,7 @@
 #include <SimpleDST.h>
 #include <SimpleTrigger.h>
-#include <LaputopSmall.h>
-#include <NStations.h>
 
+#include "cuts.h"
 #include <TChain.h>
 #include <TH1D.h>
 #include <TMath.h>
@@ -42,15 +41,7 @@ const Double_t microsecond = 1e-6 * second;
 
 void tScramble(po::variables_map vm, vector<string> inFiles);
 //void tScramble(po::variables_map vm, const char* inFilesStr);
-//void tScramble(po::variables_map vm);
-bool newConfig(string config);
-bool filterCut(po::variables_map vm, SimpleDST dst);
-int ITenergyCut(po::variables_map vm, SimpleDST dst, vector<float> ebins);
-int ITs125Cut(po::variables_map vm, SimpleDST dst, vector<float> sbins);
-//int ICenergyCut(po::variables_map vm, SimpleDST dst, struct splinetable table, double zenith, vector<float> ebins);
-int ICenergyCut(po::variables_map vm, SimpleDST dst, photospline::splinetable<> &table, double zenith, vector<float> ebins);
 
-//need to add LaputopSmall lap and NStations nstat here
 
 int main(int argc, char* argv[]) {
 
@@ -157,6 +148,7 @@ void tScramble(po::variables_map vm, vector<string> inFiles_) {
   // Read input parameters
   string outBase = vm["outBase"].as<string>();
   string config = vm["config"].as<string>();
+  string filter = vm["filter"].as<string>();
   string method = vm["method"].as<string>();
   string yyyymmdd = vm["yyyymmdd"].as<string>();
   const Int_t nInt = atoi(vm["nInt"].as<string>().c_str());
@@ -234,21 +226,24 @@ void tScramble(po::variables_map vm, vector<string> inFiles_) {
 
   const char* masterTree;
   const char* triggerTree;
-  const char* stationTree;
-  if (detector == "IC") {
-    masterTree = "CutDST";
-    triggerTree = "TDSTTriggers";
-    stationTree = "";
+  bool sundp2 = true;
+
+  Config cfg(vm);
+
+  if (cfg.detector == Config::IceCube) { 
+        masterTree = "CutDST"; 
+        triggerTree = "TDSTTriggers"; 
+  } 
+  if (cfg.detector == Config::IceTop) { 
+        triggerTree = "";   // Unused? Will probably break IT functionality...  
+        sundp2 = false; 
+        if (cfg.cfg == Config::ITv3) { 
+            masterTree = "MasterTree"; 
+        } else { 
+            masterTree = "master_tree"; 
+        }
   }
-  if (detector == "IT") {
-    masterTree = "master_tree";
-    triggerTree = "";   // Unused? Will probably break IT functionality...
-    stationTree = "";
-  }
-  if (detector == "ITpass2") {
-    masterTree = "LaputopSmall";
-    stationTree = "NStations";
-    triggerTree = "";
+
 
   // Initialize the chain and read data
   TChain *cutDST = new TChain(masterTree);
@@ -259,8 +254,8 @@ void tScramble(po::variables_map vm, vector<string> inFiles_) {
 
   // Need to also initialize triggers if IC86-2016 or newer
   TChain *trigDST = new TChain(triggerTree);
-  //TChain *trigDST;
-  if (newConfig(config)) {
+
+  if (cfg.newConfig()) { 
     for (unsigned i = 0; i < inFiles_.size(); ++i) {
       trigDST->Add(inFiles_[i].c_str());
     }
@@ -323,10 +318,9 @@ void tScramble(po::variables_map vm, vector<string> inFiles_) {
   for (Long64_t jentry=0; jentry<nEntries; ++jentry) {
 
     cutDST->GetEntry(jentry);
-    if (newConfig(config)) {
+    if (cfg.newConfig()) { 
       trigDST->GetEntry(jentry);
     }
-    
 
     // Basic time check
     if (dst.ModJulDay < mjd1) {
@@ -375,7 +369,7 @@ void tScramble(po::variables_map vm, vector<string> inFiles_) {
       isGood = false;
     }
     // Second: require SMT08 trigger
-    if (newConfig(config)) {
+    if (cfg.newConfig()) { 
       if (dst_trig.TriggID_1006 == 0) {
         isGood = false;
       }
@@ -387,18 +381,18 @@ void tScramble(po::variables_map vm, vector<string> inFiles_) {
 
     // IceTop filter cut
     if (vm.count("filter")) {
-      temp = filterCut(vm, dst);
+      temp = filterCut(cfg,dst);
       if (not temp)
         isGood = false;
     }
 
     // Energy cuts for IceTop and IceCube
     if (detector == "IT" && vm.count("ebins"))
-      mapIdx = ITenergyCut(vm, dst, ebins);
+      mapIdx = ITenergyCut(dst, ebins);
     if (vm.count("spline"))
-      mapIdx = ICenergyCut(vm, dst, spline, zenith, ebins);
+      mapIdx = ICenergyCut(dst, spline, zenith, ebins);
     if (vm.count("sbins"))
-      mapIdx = ITs125Cut(vm, dst, sbins);
+      mapIdx = ITs125Cut(dst, sbins);
 
     if (mapIdx == -1)
       isGood = false;
@@ -437,15 +431,15 @@ void tScramble(po::variables_map vm, vector<string> inFiles_) {
       double ra = eq.ra; 
       double dec = eq.dec;
 
-      if (method == "anti") {
-        double localAntiS = GetGMAST(mjd);
-        ra = fmod( eq.ra - (lst + localAntiS)*pi/12,2*pi);
-      } if (method == "ext") {
-        double localExtS = GetGMEST(mjd);
-        ra = fmod( eq.ra - (lst + localExtS)*pi/12,2*pi);
-      } if (method == "solar") {
-        double tod = ( mjd - int(mjd) )* 24.;
-        ra = fmod(eq.ra - (lst + tod)*pi/12.,2*pi);
+      if (cfg.method == Config::antisid) { 
+          double localAntiS = GetGMAST(mjd); 
+          ra = fmod( eq.ra - (lst + localAntiS)*pi/12,2*pi);
+      } else if (cfg.method == Config::extsid) { 
+          double localExtS = GetGMEST(mjd); 
+          ra = fmod( eq.ra - (lst + localExtS)*pi/12,2*pi);
+      } else if (cfg.method == Config::solar) { 
+          double tod = ( mjd - int(mjd) )* 24.; 
+          ra = fmod(eq.ra - (lst + tod)*pi/12.,2*pi);
       }
       //timer3.Stop();
       //timer4.Start(validCounter == 1);
@@ -454,7 +448,7 @@ void tScramble(po::variables_map vm, vector<string> inFiles_) {
       sphereDir.theta = pi/2. - dec;
       sphereDir.phi = ra;
       // Solar coordinates need a 180 deg flip in phi (definition difference)
-      if (method == "solar")
+      if (cfg.method == Config::solar) 
         sphereDir.phi -= pi;
       while (sphereDir.phi < 0)
         sphereDir.phi += 2.*pi;
@@ -503,13 +497,13 @@ void tScramble(po::variables_map vm, vector<string> inFiles_) {
         double new_dec = eq.dec;
 
         double lst = GetGMST(rndMJD);
-        if (method == "anti") {
+        if (cfg.method == Config::antisid) { 
             double localAntiS = GetGMAST(rndMJD);
             new_ra = fmod( eq.ra - (lst + localAntiS)*pi/12,2*pi);
-        } if (method == "ext") {
+        } else if (cfg.method == Config::extsid) { 
             double localExtS = GetGMEST(rndMJD);
             new_ra = fmod( eq.ra - (lst + localExtS)*pi/12,2*pi);
-        } if (method == "solar") {
+        } else if (cfg.method == Config::solar) {
             double tod = (rndMJD - int(rndMJD) )* 24.;
             new_ra = fmod(eq.ra - (lst + tod)*pi/12.,2*pi);
         }
@@ -518,7 +512,7 @@ void tScramble(po::variables_map vm, vector<string> inFiles_) {
         // Write to map
         sphereDir.theta = (pi/2. - new_dec);
         sphereDir.phi = new_ra;
-        if (method == "solar")
+        if (cfg.method == Config::solar) 
           sphereDir.phi -= pi;
         while (sphereDir.phi < 0)
           sphereDir.phi += 2.*pi;
@@ -595,7 +589,7 @@ void tScramble(po::variables_map vm, vector<string> inFiles_) {
 
   // Clean up
   delete cutDST;
-  if (newConfig(config)) {
+  if (cfg.newConfig()) { 
     delete trigDST;
   }
   for (unsigned m=0; m<nMaps; ++m)
@@ -605,111 +599,6 @@ void tScramble(po::variables_map vm, vector<string> inFiles_) {
   printf("RT=%7.3f s, Cpu=%7.3f s\n",timer.RealTime(),timer.CpuTime());
 
 }
-
-
-bool newConfig(string config) {
-
-  if (config=="IC86-2011" || config=="IC86-2012" || config=="IC86-2013" || 
-      config=="IC86-2014" || config=="IC86-2015") {
-    return false;
-  }
-  return true;
-}
-
-
-bool filterCut(po::variables_map vm, SimpleDST dst) {
-
-  string filter = vm["filter"].as<string>();
-  string config = vm["config"].as<string>();
-  if (filter=="STA3" && dst.isSTA3)
-    return true;
-  if (config=="IT59" || config=="IT73" || config=="IT81") {
-    if ((filter=="STA8" && dst.isSTA8) ||
-        (filter=="NotSTA8" && dst.isSTA3 && !dst.isSTA8))
-      return true;
-  }
-  if (config=="IT81-2012" || config=="IT81-2013") {
-    if ((filter=="STA8" && dst.nStations>=8) ||
-        (filter=="NotSTA8" && dst.isSTA3 && dst.nStations<8))
-      return true;
-  }
-  return false;
-}
-
-//int ICenergyCut(po::variables_map vm, SimpleDST dst, splinetable t, double zenith, vector<float> ebins) {
-int ICenergyCut(po::variables_map vm, SimpleDST dst, photospline::splinetable<> &spline, double zenith, vector<float> ebins) {
-
-  // Setup basic parameters
-  double x = cos(zenith);
-  double y = log10(dst.NChannels);
-
-  // Boundary check (energy cut tables go to 0.3 in cos(zenith))
-  if (x < 0.3)
-    return -1;
-
-  // Catch additional outliers
-  double coords[2] = {x, y};
-  int centers[spline.get_ndim()];
-  if (!spline.searchcenters(coords, centers)) {
-    cout << "Variables outside of table boundaries" << endl;
-    cout << "x: " << x << " y: " << y << endl;
-    return -1;
-  }
-
-  // Calculate reconstructed energy
-  double median = spline.ndsplineeval(coords, centers, 0);
-  // Make sure we're in the energy bin range
-  if ((median < ebins[0]) || (median > ebins.back()))
-    return -1;
-
-  // Get energy bin
-  int ebin = 0;
-  while (median > ebins[ebin+1])
-    ebin += 1;
-
-  return ebin;
-}
-
-int ITenergyCut(po::variables_map vm, SimpleDST dst, vector<float> ebins) {
-
-  // Get most likely energy value
-  double llhEnergy = (dst.pLLH >= dst.fLLH) ? dst.pEnergy : dst.fEnergy;
-  double logEnergy = log10(llhEnergy);
-
-  // Make sure we're in the energy bin range
-  if ((logEnergy < ebins[0]) || (logEnergy > ebins.back()))
-    return -1;
-
-  // Get energy bin
-  int ebin = 0;
-  while (logEnergy > ebins[ebin+1])
-    ebin += 1;
-
-  return ebin;
-}
-
-int ITs125Cut(po::variables_map vm, SimpleDST dst, vector<float> sbins) {
-
-  // Get desired s125 value
-  double s125 = (dst.nStations >= 5) ? dst.s125 : dst.ss125;
-  double logS125 = log10(s125);
-
-  // Make sure we're in the bin range
-  if ((logS125 < sbins[0]) || (logS125 > sbins.back()))
-    return -1;
-
-  // Get s125 bin
-  int sbin = 0;
-  while (logS125 > sbins[sbin+1])
-    sbin += 1;
-
-  return sbin;
-}
-
-
-
-
-
 
 
 

@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.0)
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -DBOOST_LOG_DYN_LINK")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
+if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+    set (CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/../installed"
+           CACHE PATH "default install path" FORCE)
+endif()
 
 project(iter-lhreco-proj CXX C)
 
@@ -64,6 +68,7 @@ add_executable(make-sidereal-maps
     private/SimpleDST.cc
     private/SimpleTrigger.cc
     private/pickle.cc
+    private/solardipole.cc
     private/Direction.cxx
     private/astro.cxx
     )
@@ -104,6 +109,7 @@ add_executable(TimeScramble
             private/solardipole.cc
             private/SimpleTrigger.cc
             private/astro.cxx
+            private/cuts.cc
             private/time.cxx
             private/Direction.cxx
             private/SimpleDST.cc)
@@ -207,6 +213,10 @@ configure_file(${CMAKE_SOURCE_DIR}/scripts/make-local-maps.py.in
 
 configure_file(${CMAKE_SOURCE_DIR}/scripts/combine-local-maps.py.in
            ${CMAKE_BINARY_DIR}/scripts/combine-local-maps.py
+           @ONLY)
+
+configure_file(${CMAKE_SOURCE_DIR}/scripts/merge-reco.py.in
+           ${CMAKE_BINARY_DIR}/scripts/merge-reco.py
            @ONLY)
 
 if(IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/scripts)

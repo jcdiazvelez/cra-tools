@@ -29,9 +29,7 @@
 #include "TTree.h"
 #include "TROOT.h"
 #include <TChain.h>
-
-#include "cuts.h"
-
+#include <cuts.h>
 #include <astro/astro.h>
 #include <astro/time.h>
 #include <Direction.h>
@@ -44,12 +42,12 @@ namespace po = boost::program_options;
 namespace fs = boost::filesystem; 
 using namespace std;
 using namespace boost::numeric::ublas;
+
 using boost::format;
 
 typedef Healpix_Map<double> SkyMap; 
 typedef boost::shared_ptr<SkyMap> SkyMapPtr; // Map shared pointer
 
-bool newConfig(string config);
 
 double 
 Sum(const SkyMap& map,unsigned int npix) 
@@ -63,24 +61,6 @@ Sum(const SkyMap& map,unsigned int npix)
 }
 
 
-bool filterCut(po::variables_map vm, SimpleDST dst) {
-
-  string filter = vm["filter"].as<string>();
-  string config = vm["config"].as<string>();
-  if (filter=="STA3" && dst.isSTA3)
-    return true;
-  if (config=="IT59" || config=="IT73" || config=="IT81") {
-    if ((filter=="STA8" && dst.isSTA8) ||
-        (filter=="NotSTA8" && dst.isSTA3 && !dst.isSTA8))
-      return true;
-  }
-  if (config=="IT81-2012" || config=="IT81-2013") {
-    if ((filter=="STA8" && dst.nStations>=8) ||
-        (filter=="NotSTA8" && dst.isSTA3 && dst.nStations<8))
-      return true;
-  }
-  return false;
-}
 
 
 
@@ -182,17 +162,26 @@ int main(int argc, char* argv[])
 //*****************************************************************************
     const char* masterTree;
     const char* triggerTree;
-    string detector = config.substr(0,2); 
-    if (detector == "IC") { 
+    bool sundp2 = true;
+    bool usesplines = false;
+
+    Config cfg(vm);
+    if (vm.count("spline") && (cfg.detector == Config::IceCube) )
+        usesplines = true;
+
+    if (cfg.detector == Config::IceCube) { 
         masterTree = "CutDST"; 
         triggerTree = "TDSTTriggers"; 
     } 
-    if (detector == "IT") { 
-        masterTree = "master_tree"; 
+    if (cfg.detector == Config::IceTop) { 
         triggerTree = "";   // Unused? Will probably break IT functionality...  
+        sundp2 = false;
+        if (cfg.cfg == Config::ITv3) { 
+            masterTree = "MasterTree"; 
+        } else { 
+            masterTree = "master_tree"; 
+        }
     }
-
-
 
 
     // TFile f("Event.root");
@@ -204,7 +193,7 @@ int main(int argc, char* argv[])
 
 
     TChain trigDST(triggerTree);
-    if (newConfig(config)) { 
+    if (cfg.newConfig()) { 
         for (unsigned i = 0; i < input.size(); ++i) { 
             trigDST.Add(input[i].c_str()); 
         }
@@ -264,10 +253,10 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < nEntries; ++i) {
        cutDST.GetEntry(i); 
-       if (newConfig(config)) { 
+       if (cfg.newConfig()) { 
            trigDST.GetEntry(i); 
        }
-    
+
        if ( show_progress && (i % 5000 == 0) ) 
           progress_bar(i/float(nEntries), " Reading entries");
 
@@ -277,11 +266,11 @@ int main(int argc, char* argv[])
        
        double mjd = dst.ModJulDay;
        double lst = GetGMST(mjd);
-       if (method == "anti") { 
+       if (cfg.method == Config::antisid) { 
            lst = GetGMAST(mjd); 
-       } else if (method == "ext") { 
+       } else if (cfg.method == Config::extsid) { 
            lst = GetGMEST(mjd);
-       } else if (method == "solar") {
+       } else if (cfg.method == Config::solar) {
            lst= ( mjd - int(mjd) )* 24.; 
        }
  
@@ -289,8 +278,15 @@ int main(int argc, char* argv[])
        // https://en.wikipedia.org/wiki/Time_in_Antarctica
        timeBin = int( nTimeBins*lst/24.0 ); 
 
-       azimuth = dst.LLHAzimuthDeg/180.*M_PI; 
-       zenith = dst.LLHZenithDeg/180.*M_PI; 
+       if (cfg.detector == Config::IceCube) { 
+           azimuth = dst.LLHAzimuthDeg/180.*M_PI; 
+           zenith = dst.LLHZenithDeg/180.*M_PI; 
+
+       } else if (cfg.detector == Config::IceTop) { 
+           zenith = dst.Zenith;
+           azimuth = dst.Azimuth;
+
+       }
 
        if ( dst.NDirHits < ndirmin*cos(zenith) ) 
           continue;
@@ -303,18 +299,24 @@ int main(int argc, char* argv[])
            continue;
 
        // IceTop filter cut
-       if (vm.count("filter") && !filterCut(vm, dst))
+       if (!filterCut(cfg,dst))
            continue;
 
        // Energy cuts for IceTop and IceCube
-       if (detector == "IT" && !ITenergyCut(dst, elogmin,elogmax)) 
+       if (cfg.detector == Config::IceTop) {
+           if (cfg.cfg == Config::ITv3) { 
+               if (!ITNstatCut(dst, slogmin,slogmax)) 
+                   continue;
+           } else { 
+               if (!ITenergyCut(dst, elogmin,elogmax)) 
+                   continue; 
+               if (!ITs125Cut(dst, slogmin,slogmax)) 
+                   continue;
+           }
+       }
+       if (usesplines && !ICenergyCut(dst, spline, zenith, elogmin, elogmax))
            continue;
 
-       if (vm.count("spline") && !ICenergyCut(dst, spline, zenith, elogmin, elogmax))
-           continue;
-
-       if (detector == "IT" &&  !ITs125Cut(dst, slogmin,slogmax))
-           continue;
 
        
        pointing pt(zenith, azimuth);
@@ -324,7 +326,7 @@ int main(int argc, char* argv[])
            Direction dir(zenith,azimuth);
            Equatorial eq = GetEquatorialFromDirection(dir, mjd);
 
-           eventweight = solar_dipole(mjd, eq.ra, eq.dec,true); 
+           eventweight = solar_dipole(mjd, eq.ra, eq.dec,sundp2); 
        }
        weightsum += eventweight;
 
@@ -361,15 +363,6 @@ int main(int argc, char* argv[])
     std::cout << "weightsum: " << weightsum << std::endl;
 
    
-}
-
-bool newConfig(string config) {
-
-  if (config=="IC86-2011" || config=="IC86-2012" || config=="IC86-2013" || 
-      config=="IC86-2014" || config=="IC86-2015") {
-    return false;
-  }
-  return true;
 }
 
 

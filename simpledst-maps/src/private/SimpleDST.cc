@@ -33,6 +33,9 @@ SimpleDST::SetupChain(TChain* chain, std::string config)
     reco = "ShowerPlane";
     if (config == "IT81-2013")
       reco = "LaputopStandard";
+    else if (config == "ITpass2")
+      reco = "LaputopSmall";
+
     std::string recoazstr(reco + ".azimuth");
     std::string recozstr(reco + ".zenith");
     std::string recoexstr(reco + ".exists");
@@ -44,6 +47,10 @@ SimpleDST::SetupChain(TChain* chain, std::string config)
     chain->SetBranchAddress(recoex, &isReco, &b_isReco);
 
     // IceTop Filters
+    if (config == "ITpass2"){
+      chain->SetBranchAddress("QFilterMask.IceTopSTA3_13", &isSTA3, &b_isSTA3);
+      chain->SetBranchAddress("QFilterMask.IceTopSTA5_13", &isSTA5, &b_isSTA5);
+    }
     if (config == "IT81-2013"){
       chain->SetBranchAddress("FilterMask.IceTopSTA3_13", &isSTA3, &b_isSTA3);
       chain->SetBranchAddress("FilterMask.IceTopSTA5_13", &isSTA5, &b_isSTA5);
@@ -72,26 +79,23 @@ SimpleDST::SetupChain(TChain* chain, std::string config)
     }
     
 
-    // ShowerLLH values
-    chain->SetBranchAddress("ShowerLLH_proton.energy", &pEnergy, &b_pEnergy);
-    chain->SetBranchAddress("ShowerLLH_iron.energy", &fEnergy, &b_fEnergy);
-    chain->SetBranchAddress("maxLLH_proton.value", &pLLH, &b_pLLH);
-    chain->SetBranchAddress("maxLLH_iron.value", &fLLH, &b_fLLH);
-
     //Laputop values
-    chain->SetBranchAddress("LaputopStandardParams.s125", &s125, &b_s125);
-    chain->SetBranchAddress("LaputopSmallShowerParams.s125", &ss125, &b_ss125);
+    if (config == "ITpass2"){
+        chain->SetBranchAddress("LaputopParams.s125", &s125, &b_s125);
+        chain->SetBranchAddress("LaputopSmallParams.s125", &ss125, &b_ss125);
+    } else {
+        chain->SetBranchAddress("LaputopStandardParams.s125", &s125, &b_s125);
+        chain->SetBranchAddress("LaputopSmallShowerParams.s125", &ss125, &b_ss125);
+
+        // ShowerLLH values
+        chain->SetBranchAddress("ShowerLLH_proton.energy", &pEnergy, &b_pEnergy);
+        chain->SetBranchAddress("ShowerLLH_iron.energy", &fEnergy, &b_fEnergy);
+        chain->SetBranchAddress("maxLLH_proton.value", &pLLH, &b_pLLH);
+        chain->SetBranchAddress("maxLLH_iron.value", &fLLH, &b_fLLH);
+
+    }
 
   }
-  
-  // GB IceTop config -- value is NStations
-  if (config == "ITpass2"){
-    chain->SetBranchAddress("time", &time, &b_time);
-    chain->SetBranchAddress("zenith", &Zenith, &b_Zenith);
-    chain->SetBranchAddress("azimuth", &Azimuth, &b_Azimuth);
-    chain->SetBranchAddress("value", &nStations, &b_nStations);
-  } 
-    
 
 }
 
