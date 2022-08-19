@@ -73,9 +73,15 @@ if __name__ == "__main__":
             default='@CRA_BUILD@/submit-dir',
             help='submit directory')
     p.add_argument('--elogmax', dest='elogmax',type=float,
-            default=4.5,
+            default=0.0,
             help='max log energy/GeV')
     p.add_argument('--elogmin', dest='elogmin',type=float,
+            default=0.0,
+            help='min log energy/GeV')
+    p.add_argument('--smax', dest='smax',type=float,
+            default=0.0,
+            help='max log energy/GeV')
+    p.add_argument('--smin', dest='smin',type=float,
             default=0.0,
             help='min log energy/GeV')
     p.add_argument('--ndirc_min', dest='ndirc_min',
@@ -158,7 +164,15 @@ if __name__ == "__main__":
         os.makedirs('{}/combined'.format(outBase))
 
     shexec=''
-    infile_prefix = "CR_ICECUBE_LOCAL_{elogmin:.2f}-{elogmax:.2f}GeV_NSIDE{nsideout}_degbin-"
+    s_opts["erange"] = ""
+    s_opts["srange"] = ""
+    if args.elogmax > 0:
+        s_opts["erange"] = "_{elogmin:.2f}-{elogmax:.2f}GeV".format(**s_opts)
+    srangestr = ""
+
+    if args.smax > 0:
+        s_opts["srange"] = "_{smin:.2f}-{smax:.2f}STA8".format(**s_opts)
+    infile_prefix = "CR_ICECUBE_LOCAL{erange}{srange}_NSIDE{nsideout}_degbin-"
     infile = infile_prefix+"{degbin:03d}.fits.gz"
 
     for degbin in range(0,360):
