@@ -26,7 +26,7 @@
 #include <iterator>
 #include <vector>
 
-#include <iter-lhreco-proj/pickle.h>
+#include <iter-lhreco/pickle.h>
 #include "TFile.h"
 #include "TTree.h"
 #include <TChain.h>

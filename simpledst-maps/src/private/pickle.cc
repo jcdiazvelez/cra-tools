@@ -6,7 +6,7 @@
 #include <iomanip>  
 #include <string>
 #include <stdexcept>
-#include <iter-lhreco-proj/pickle.h>
+#include <iter-lhreco/pickle.h>
 
 
 using boost::format;

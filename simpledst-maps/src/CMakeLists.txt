@@ -155,12 +155,22 @@ target_link_libraries(tsmc
                 ${PHOTOSPLINE_LIBRARIES} -lboost_log)
 
 
+add_executable(illh-reco
+            private/multi-llh.cc 
+            private/pickle.cc
+            private/config.cxx
+            private/illh-utils.cc
+            )
+
+
+
 target_link_libraries(make-local-maps 
     ${PHOTOSPLINE_LIBRARIES} photospline 
     ${HEALPIX-CXX_LIBRARIES} 
     ${Boost_LIBRARIES} 
     ${ROOT_LIBRARIES} 
     ${PAL_LIBRARIES})
+
 
 target_link_libraries(get_azimuth ${PHOTOSPLINE_LIBRARIES} photospline ${HEALPIX-CXX_LIBRARIES} ${Boost_LIBRARIES} ${ROOT_LIBRARIES} )
 
@@ -184,6 +194,11 @@ target_link_libraries(make-random-local-maps
 
 target_link_libraries(fitq ${PHOTOSPLINE_LIBRARIES} photospline ${HEALPIX-CXX_LIBRARIES} ${Boost_LIBRARIES} ${ROOT_LIBRARIES} -lMinuit)
 target_link_libraries(fitd ${PHOTOSPLINE_LIBRARIES} photospline ${HEALPIX-CXX_LIBRARIES} ${Boost_LIBRARIES} ${ROOT_LIBRARIES} -lMinuit)
+
+target_link_libraries(illh-reco
+                ${CFITSIO_LIBRARIES} 
+                ${HEALPIX-CXX_LIBRARIES} 
+                ${Boost_LIBRARIES})
 
 
 
@@ -211,6 +226,10 @@ configure_file(${CMAKE_SOURCE_DIR}/scripts/make-local-maps.py.in
            ${CMAKE_BINARY_DIR}/scripts/make-local-maps.py
            @ONLY)
 
+configure_file(${CMAKE_SOURCE_DIR}/scripts/make-local-maps-IT.py.in
+           ${CMAKE_BINARY_DIR}/scripts/make-local-maps-IT.py
+           @ONLY)
+
 configure_file(${CMAKE_SOURCE_DIR}/scripts/combine-local-maps.py.in
            ${CMAKE_BINARY_DIR}/scripts/combine-local-maps.py
            @ONLY)
@@ -220,7 +239,7 @@ configure_file(${CMAKE_SOURCE_DIR}/scripts/merge-reco.py.in
            @ONLY)
 
 if(IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/scripts)
-       exec_program(test ARGS -h ${CMAKE_BINARY_DIR}/scripts/npx4 -a -e ${CMAKE_BINARY_DIR}/scripts/npxi4
+       exec_program(test ARGS -h ${CMAKE_BINARY_DIR}/scripts/npx4 -a -e ${CMAKE_BINARY_DIR}/scripts/npx4
             || ln -snf ${CMAKE_SOURCE_DIR}/scripts/npx4 ${CMAKE_BINARY_DIR}/scripts/npx4
             OUTPUT_VARIABLE DEV_NULL)
        install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/scripts
@@ -230,5 +249,18 @@ if(IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/scripts)
          PATTERN "*.py"
          PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ)
 endif (IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/scripts)
+
+if(IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/resources)
+       exec_program(test ARGS -h ${CMAKE_BINARY_DIR}/resources -e ${CMAKE_BINARY_DIR}/resources
+            || ln -snf ${CMAKE_SOURCE_DIR}/resources ${CMAKE_BINARY_DIR}/resources
+            OUTPUT_VARIABLE DEV_NULL)
+       install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/resources
+         DESTINATION ${CMAKE_BINARY_DIR}/resources
+         PATTERN ".svn" EXCLUDE
+         PATTERN ".git" EXCLUDE
+         PATTERN "*.py"
+         PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ)
+endif (IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/resources)
+
 
 
