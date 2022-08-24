@@ -115,12 +115,7 @@ int main(int argc, char* argv[])
             return 0; 
         } 
         po::notify(vm); // throws on error, so do after help in case there are any problems
-        //cout << prefix << " input files for " << detector << ":\n";
         
-        //if (vm.count("input")) 
-        //{ 
-         //   cout << "Input files: " << "\n";
-        //}
      
         if (timeidxMax==0){
             timeidxMax=nTimesteps;
