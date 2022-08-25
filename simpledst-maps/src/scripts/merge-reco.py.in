@@ -47,6 +47,9 @@ if __name__ == "__main__":
     p.add_argument('--sd', dest='sundp',
             default=False, action='store_true',
             help='Correct for solar dipole on event-by-event basis')
+    p.add_argument('--reco', dest='reco',
+            default=False, action='store_true',
+            help='Run iter-llh-reco')
 
     # Energy cut options
     p.add_argument('--ebins', dest='ebins',
@@ -58,8 +61,8 @@ if __name__ == "__main__":
             default='@CRA_BUILD@/maps',
             help='Destination directory for output files')
     p.add_argument('-i', '--indir', dest='indir',
-            default='@CRA_BUILD@/maps',
-            help='Destination directory for output files')
+            default=None,
+            help='Source directory for input files (if not set. Assume outdir)')
     p.add_argument('--test', dest='test',
             default=False, action='store_true',
             help='Option for running off cluster to test')
@@ -78,12 +81,12 @@ if __name__ == "__main__":
     p.add_argument('--elogmin', dest='elogmin',type=float,
             default=0.0,
             help='min log energy/GeV')
-    p.add_argument('--smax', dest='smax',type=float,
-            default=0.0,
-            help='max log energy/GeV')
-    p.add_argument('--smin', dest='smin',type=float,
-            default=0.0,
-            help='min log energy/GeV')
+    p.add_argument('--smax', dest='smax',type=int,
+            default=0,
+            help='max nStations')
+    p.add_argument('--smin', dest='smin',type=int,
+            default=0,
+            help='min nStations')
     p.add_argument('--ndirc_min', dest='ndirc_min',
             default=9,
             help='min ndir value')
@@ -102,9 +105,12 @@ if __name__ == "__main__":
     # Submitter capable of submitting multiple days as one job, w/
     # TimeScramble.cc reading filelist from .txt file.
     #  - determines .txt file location (can remove after jobs run) 
-    
 
     args = p.parse_args()
+
+    if args.indir is None:
+        args.indir = args.outdir
+    
     c_opts = vars(args).copy()
     s_opts = vars(args).copy()
     if not args.config:
@@ -147,7 +153,6 @@ if __name__ == "__main__":
     # Python magic: flatten list of arbitrary depth into list of strings
     flatList = lambda *n: (str(e) for a in n \
             for e in (flatList(*a) if isinstance(a, (tuple, list)) else (a,)))
-    #c_opts = ' '.join(list(flatList(c_opts)))
     c_opts = list(flatList(c_opts))
     # Ebins need to go last (multitoken parameters)
 
@@ -163,6 +168,10 @@ if __name__ == "__main__":
     if not os.path.isdir('{}/combined'.format(outBase)):
         os.makedirs('{}/combined'.format(outBase))
 
+    s_opts['detector'] = "ICECUBE" 
+    if args.config.startswith("IT"):
+        s_opts['detector'] = "ICETOP" 
+
     shexec=''
     s_opts["erange"] = ""
     s_opts["srange"] = ""
@@ -171,8 +180,8 @@ if __name__ == "__main__":
     srangestr = ""
 
     if args.smax > 0:
-        s_opts["srange"] = "_{smin:.2f}-{smax:.2f}STA8".format(**s_opts)
-    infile_prefix = "CR_ICECUBE_LOCAL{erange}{srange}_NSIDE{nsideout}_degbin-"
+        s_opts["srange"] = "_{smin:d}-{smax:d}S".format(**s_opts)
+    infile_prefix = "CR_{detector}_LOCAL{erange}{srange}_NSIDE{nsideout}_degbin-"
     infile = infile_prefix+"{degbin:03d}.fits.gz"
 
     for degbin in range(0,360):
@@ -209,21 +218,23 @@ if __name__ == "__main__":
         shexec += ' '.join(ex)
         shexec += ';\n'
 
-    reco_prefix = infile_prefix.format(**s_opts)
-    cmd  = '@CRA_BUILD@/bin/illh-reco'
-    ex  = [cmd, 
-        '--cfg','@CRA_BUILD@/resources/detectors.json' 
-        '--prefix','{}/combined/{}'.format(outBase,reco_prefix), 
-        '--suffix','.fits.gz',
-        '--outdir','{}/reco'.format(outBase),
-        '--lon','270',
-        '--lat','90',
-        '--detector','ICECUBE',
-        '--thetamax','65'
-        ]
-    shexec += '\n#Reconstruct;\n'
-    shexec += ' '.join(ex)
-    shexec += ';\n'
+    if args.reco:
+
+        reco_prefix = infile_prefix.format(**s_opts)
+        cmd  = '@CRA_BUILD@/bin/illh-reco'
+        ex  = [cmd, 
+            '--cfg','@CRA_BUILD@/resources/detectors.json' 
+            '--prefix','{}/combined/{}'.format(outBase,reco_prefix), 
+            '--suffix','.fits.gz',
+            '--outdir','{}/reco'.format(outBase),
+            '--lon','270',
+            '--lat','90',
+            '--detector','ICECUBE',
+            '--thetamax','65'
+            ]
+        shexec += '\n#Reconstruct;\n'
+        shexec += ' '.join(ex)
+        shexec += ';\n'
 
     if not args.test:
        pysubmit(shexec, sublines=sublines, test=args.test, jobID=jobID,

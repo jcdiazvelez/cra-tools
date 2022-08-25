@@ -98,7 +98,7 @@ int main(int argc, char* argv[])
     double lon;
     double lat;
     double elogmin, elogmax, rloglmax,ldirmin,ndirmin;
-    double slogmin, slogmax;
+    double slogmin, slogmax, smin, smax;
     std::vector< std::string > input;
     std::string coords = "Azimuth/ Zenith";
     int nEvents = 0;
@@ -119,6 +119,8 @@ int main(int argc, char* argv[])
              ("elogmax", po::value<double>(&elogmax)->default_value(0), "Maximum log energy (GeV) (0: no cut)")
              ("slogmin", po::value<double>(&slogmin)->default_value(0), "Minimum logS125")
              ("slogmax", po::value<double>(&slogmax)->default_value(0), "Maximum logS125 (0: no cut)")
+             ("smin", po::value<double>(&smin)->default_value(0), "Minimum nStations")
+             ("smax", po::value<double>(&smax)->default_value(0), "Maximum nStations")
              ("ldirc_min", po::value<double>(&ldirmin)->default_value(0), "Minimum ldir (0: no cut)")
              ("ndirc_min", po::value<double>(&ndirmin)->default_value(0), "Minimum ndir (0: no cut)")
              ("rloglmax", po::value<double>(&rloglmax)->default_value(0), "Maximum rlogL (0: no cut)")
@@ -338,15 +340,20 @@ int main(int argc, char* argv[])
     }
     std::cout << std::endl;
 
+    string detector = "ICECUBE";
+    if (cfg.detector == Config::IceTop) 
+        detector = "ICETOP";
 
     for (unsigned int degbin=0;degbin< 360;degbin++) 
     { 
          fitshandle fitsOut;
          stringstream namefits;
          if (elogmin > 0 || elogmax > 0)
-            namefits << foldername << boost::format("/CR_ICECUBE_LOCAL_%4.2f-%4.2fGeV_NSIDE%d_degbin-%03d.fits.gz") % elogmin % elogmax % nsideOut % degbin;
+            namefits << foldername << boost::format("/CR_%s_LOCAL_%4.2f-%4.2fGeV_NSIDE%d_degbin-%03d.fits.gz") % detector % elogmin % elogmax % nsideOut % degbin;
+         else if (smin > 0 || smax > 0)
+            namefits << foldername << boost::format("/CR_%s_LOCAL_%u-%uS_NSIDE%d_degbin-%03d.fits.gz") % detector % smin % smax % nsideOut % degbin;
          else
-            namefits << foldername << boost::format("/CR_ICECUBE_LOCAL_NSIDE%d_degbin-%03d.fits.gz") % nsideOut % degbin;
+            namefits << foldername << boost::format("/CR_%s_LOCAL_NSIDE%d_degbin-%03d.fits.gz") % detector % nsideOut % degbin;
          if (fs::exists(namefits.str()) ) { 
                  fs::remove(namefits.str() ); 
          }

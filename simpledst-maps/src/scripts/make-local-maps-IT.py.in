@@ -219,7 +219,7 @@ if __name__ == "__main__":
         ex = ' '.join(ex)
         print(ex)
         print('')
-        os.makedirs('{}/{}'.format(outBase,dateList[i]))
+        os.makedirs('{}/{}'.format(outBase,subdir))
         pysubmit(ex, sublines=sublines, test=args.test, jobID=jobID,
                 outdir=args.submit_dir,
                 header=header,
