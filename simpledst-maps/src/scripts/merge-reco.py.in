@@ -223,14 +223,10 @@ if __name__ == "__main__":
         reco_prefix = infile_prefix.format(**s_opts)
         cmd  = '@CRA_BUILD@/bin/illh-reco'
         ex  = [cmd, 
-            '--cfg','@CRA_BUILD@/resources/detectors.json' 
+            '--cfg','@CRA_BUILD@/resources/{detector}.json'.format(**s_opts),
             '--prefix','{}/combined/{}'.format(outBase,reco_prefix), 
             '--suffix','.fits.gz',
             '--outdir','{}/reco'.format(outBase),
-            '--lon','270',
-            '--lat','90',
-            '--detector','ICECUBE',
-            '--thetamax','65'
             ]
         shexec += '\n#Reconstruct;\n'
         shexec += ' '.join(ex)
