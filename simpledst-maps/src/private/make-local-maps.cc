@@ -306,8 +306,9 @@ int main(int argc, char* argv[])
 
        // Energy cuts for IceTop and IceCube
        if (cfg.detector == Config::IceTop) {
-           if (cfg.cfg == Config::ITv3) { 
-               if (!ITNstatCut(dst, slogmin,slogmax)) 
+           if (cfg.cfg == Config::ITv3) {
+		// Energy cuts based on smin <= nStations < smax 
+               if (!ITNstatCut(dst, smin,smax)) 
                    continue;
            } else { 
                if (!ITenergyCut(dst, elogmin,elogmax)) 
