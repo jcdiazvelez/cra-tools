@@ -8,8 +8,8 @@ import subprocess
 #sys.path.append('/home/fmcnally/npx4')
 from npx4.pysubmit import pysubmit
 
-""" 
-INSTRUCTIONS: before executing, change hardcoded paths anywhere you see 
+"""
+INSTRUCTIONS: before executing, change hardcoded paths anywhere you see
 the word 'CHANGE'.
 """
 
@@ -58,7 +58,7 @@ if __name__ == "__main__":
 
     # Additional options
     p.add_argument('-o', '--outdir', dest='outdir',
-            default='@CRA_BUILD@/maps',
+            default='/data/ana/CosmicRay/Anisotropy/IceTop/ITpass2/output/@USER_DIR@/ITpass2_sd',
             help='Destination directory for output files')
     p.add_argument('-i', '--indir', dest='indir',
             default=None,
@@ -71,9 +71,9 @@ if __name__ == "__main__":
             help='Option to overwrite existing map files')
     p.add_argument('--cvmfs', dest='cvmfs',
             default='@CVMFS_SROOTBASE@',
-            help='CVMFS environment')
+            help='CVMFS environment, should be py3-v4.2.1 at least')
     p.add_argument('--submit_dir', dest='submit_dir',
-            default='@CRA_BUILD@/submit-dir',
+            default='/home/@USER_DIR@/cra-tools-gb-edits/simpledst-maps/src/submit',
             help='submit directory')
     p.add_argument('--elogmax', dest='elogmax',type=float,
             default=0.0,
@@ -83,10 +83,10 @@ if __name__ == "__main__":
             help='min log energy/GeV')
     p.add_argument('--smax', dest='smax',type=int,
             default=0,
-            help='max nStations')
+            help='max nStations, noninclusive')
     p.add_argument('--smin', dest='smin',type=int,
             default=0,
-            help='min nStations')
+            help='min nStations, inclusive')
     p.add_argument('--ndirc_min', dest='ndirc_min',
             default=9,
             help='min ndir value')
@@ -104,13 +104,13 @@ if __name__ == "__main__":
     own directories as needed """
     # Submitter capable of submitting multiple days as one job, w/
     # TimeScramble.cc reading filelist from .txt file.
-    #  - determines .txt file location (can remove after jobs run) 
+    #  - determines .txt file location (can remove after jobs run)
 
     args = p.parse_args()
 
     if args.indir is None:
         args.indir = args.outdir
-    
+
     c_opts = vars(args).copy()
     s_opts = vars(args).copy()
     if not args.config:
@@ -168,9 +168,9 @@ if __name__ == "__main__":
     if not os.path.isdir('{}/combined'.format(outBase)):
         os.makedirs('{}/combined'.format(outBase))
 
-    s_opts['detector'] = "ICECUBE" 
+    s_opts['detector'] = "ICECUBE"
     if args.config.startswith("IT"):
-        s_opts['detector'] = "ICETOP" 
+        s_opts['detector'] = "ICETOP"
 
     shexec=''
     s_opts["erange"] = ""
@@ -187,7 +187,7 @@ if __name__ == "__main__":
     for degbin in range(0,360):
 
         # Filter by desired dates
-        if args.dates is None: 
+        if args.dates is None:
             print(os.path.join(inBase,"*",infile).format(**s_opts,degbin=degbin))
             filelist = glob.glob(os.path.join(inBase,"*",infile).format(**s_opts,degbin=degbin))
             if not filelist:
@@ -205,11 +205,11 @@ if __name__ == "__main__":
                     os._exit(1)
                 else:
                     print("warning:", "file",f,"does not exist!")
-                    
+
 
         outfile = infile.format(**s_opts,degbin=degbin)
         jobID = 'combinelocalmaps_%s_%05i_%05i' % (args.config, degbin, random.randint(0,99999))
-        cmd  = '@CRA_BUILD@/bin/combine-local-maps' 
+        cmd  = '/home/@USER_DIR@/cra-tools-gb-edits/simpledst-maps/build/bin/combine-local-maps'
         #ex = [cmd] + c_opts + ['--outfile','{}/combined/{}'.format(outBase,outfile), '--input', " ".join(filelist) ]
         ex = [cmd] + c_opts + ['--outfile','{}/combined/{}'.format(outBase,outfile), '--input'] +filelist
         #ex = [cmd, c_opts,'--outfile','{}/combined/{}'.format(outBase,outfile), '--input', " ".join(filelist) ]
@@ -221,10 +221,10 @@ if __name__ == "__main__":
     if args.reco:
 
         reco_prefix = infile_prefix.format(**s_opts)
-        cmd  = '@CRA_BUILD@/bin/illh-reco'
-        ex  = [cmd, 
-            '--cfg','@CRA_BUILD@/resources/{detector}.json'.format(**s_opts),
-            '--prefix','{}/combined/{}'.format(outBase,reco_prefix), 
+        cmd  = '/home/@USER_DIR@/cra-tools-gb-edits/simpledst-maps/build/bin/illh-reco'
+        ex  = [cmd,
+            '--cfg','/home/@USER_DIR@/cra-tools-gb-edits/simpledst-maps/build/resources/{detector}.json'.format(**s_opts),
+            '--prefix','{}/combined/{}'.format(outBase,reco_prefix),
             '--suffix','.fits.gz',
             '--outdir','{}/reco'.format(outBase),
             ]
@@ -239,4 +239,3 @@ if __name__ == "__main__":
                 )
     else:
        print(shexec)
-     
