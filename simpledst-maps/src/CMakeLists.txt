@@ -44,6 +44,7 @@ add_executable(make-local-maps
     private/SimpleDST.cc
     private/SimpleTrigger.cc
     private/pickle.cc
+    private/iter-lhreco/illh-utils.cc
     private/solardipole.cc
     private/Direction.cxx
     private/astro.cxx

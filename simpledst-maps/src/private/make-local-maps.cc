@@ -25,6 +25,7 @@
 #include <vector>
 
 #include <iter-lhreco-proj/pickle.h>
+#include <iter-lhreco-proj/illh-utils.h>
 #include "TFile.h"
 #include "TTree.h"
 #include "TROOT.h"
@@ -98,6 +99,20 @@ void progress_bar(float progress, std::string msg)
     std::cout << "] " << progress * 100.0 << " %\r"; 
     std::cout.flush(); 
 }
+
+SkyMapPtr load_siderial_map(std::string path)
+{
+    SkyMapPtr sidMap(new SkyMap);
+
+    fitshandle handle;
+    handle.open(path.c_str());
+    handle.goto_hdu(2);
+    read_Healpix_map_from_fits(handle, *sidMap, 1);
+    handle.close();
+    
+    return sidMap;
+}
+
 
 int main(int argc, char* argv[])
 {
