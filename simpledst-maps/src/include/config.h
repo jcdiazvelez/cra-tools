@@ -8,7 +8,7 @@
  *
  */
 
-namespace Config
+namespace config
 {
 
   /**
@@ -18,8 +18,8 @@ namespace Config
     { 
         solar,
         sidereal,
-        anti_sidereal,
-        extende_sidereal
+        antisid,
+        extsid
     };
 
   enum Detector

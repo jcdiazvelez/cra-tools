@@ -283,8 +283,8 @@ int main(int argc, char* argv[])
     for (UInt_t j = 0; j < chain->GetEntries(); ++j) {
       chain->GetEntry(j);
       if (cut_nan(dst) && 
-          cut_zenith_poles(dst) &&
-          (dst->nhit > 8)) //cut_smt_trigger(TriggID_1006) && //cut_reco_idtag(dst)*/)
+          cut_zenith_poles(dst))// &&
+          //(dst->nhit > 8)) //cut_smt_trigger(TriggID_1006) && //cut_reco_idtag(dst)*/)
       {
         // Extra cuts on the line fit
         isGoodLineFit = cut_nan(dst, kTRUE) && cut_zenith_poles(dst, kTRUE);

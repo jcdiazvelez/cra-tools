@@ -37,8 +37,9 @@ chi2(int& npar, double* gin, double& f, double* par, int iflag)
   double sigma2;
   vec3 v;
 
-  const double maxZ = sin(68*degree);
-  const double minZ = sin(-89*degree);
+  //const double maxZ = sin(68*degree);
+  const double minZ = sin(-90*degree);
+  const double maxZ = sin(-30*degree);
 
   for (int i = 0; i < map.Npix(); ++i) {
     v = map.pix2vec(i);
@@ -55,8 +56,8 @@ chi2(int& npar, double* gin, double& f, double* par, int iflag)
 
 int main(int argc, char* argv[])
 {
-  if (argc != 3) {
-    cerr << "\nUsage: " << argv[0] << " [bkg.FITS] [dat.FITS]\n\n";
+  if (argc != 2) {
+    cerr << "\nUsage: " << argv[0] << " [FITS]\n\n";
     return 1;
   }
 
@@ -64,8 +65,12 @@ int main(int argc, char* argv[])
   HMap dat;
 
   // Read in the relative intensity map
-  read_Healpix_map_from_fits(argv[1], bkg);
-  read_Healpix_map_from_fits(argv[2], dat);
+  fitshandle handle;
+  handle.open(argv[1]);
+  handle.goto_hdu(2);
+  read_Healpix_map_from_fits(handle, dat, 1);
+  read_Healpix_map_from_fits(handle, bkg, 2);
+  handle.close();
 
   map.SetNside(bkg.Nside(), bkg.Scheme());
   mapVar.SetNside(bkg.Nside(), bkg.Scheme());
@@ -82,21 +87,22 @@ int main(int argc, char* argv[])
   double Nb;
   double Nd;
   double minZ = sin(-89*degree);
-  double maxZ = sin(68*degree);
-  //const double alpha = 1./20.;
-  const double alpha = 1.;
+  double maxZ = sin(-30*degree);
+  const double alpha = 1./20.;
+  //const double alpha = 1.;
   vec3 v;
 
   for (int i = 0; i < bkg.Npix(); ++i) {
     v = map.pix2vec(i);
     if (v.z >= minZ && v.z <= maxZ) {
       Nb = bkg[i];
-      Nd = Nb*map[i]+Nb;
-      map[i] = dat[i];
-      if (Nb > 0){
-         //mapVar[i] = Nd*(Nb + alpha*Nd) / (Nb*Nb*Nb);
-         mapVar[i] = 1./Nb;
-      }
+      Nd = dat[i];
+      map[i] = (Nd - Nb) / Nb;
+      mapVar[i] = Nd*(Nb + alpha*Nd) / (Nb*Nb*Nb);
+      //Nd = Nb*map[i]+Nb;
+      //if (Nb > 0){
+      //   mapVar[i] = Nd*(Nb + alpha*Nd) / (Nb*Nb*Nb);
+     // }
       if (map[i] != map[i])
         map[i] = 0.;
       if (mapVar[i] != mapVar[i])
@@ -172,7 +178,7 @@ int main(int argc, char* argv[])
   cout << "alpha: " << atan(py/px)/degree << endl;
   
   minZ = sin(-89*degree);
-  maxZ = sin(68*degree);
+  maxZ = sin(-30*degree);
 
   for (int i = 0; i < mapRes.Npix(); ++i) {
     v = mapRes.pix2vec(i);

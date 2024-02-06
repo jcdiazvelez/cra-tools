@@ -17,12 +17,14 @@ FIND_PACKAGE(Boost 1.36.0 COMPONENTS system filesystem program_options iostreams
 FIND_PACKAGE(ROOT)
 FIND_PACKAGE(photospline REQUIRED)
 FIND_PACKAGE(PAL)
+FIND_PACKAGE(GSL)
 
 include_directories(
                 ${PAL_INCLUDE_DIR} 
                 ${Boost_INCLUDE_DIR} 
                 ${CFITSIO_INCLUDE_DIRS} 
                 ${HEALPIX-CXX_INCLUDE_DIRS} 
+                ${GSL_INCLUDE_DIRS} 
                 ${ROOT_INCLUDE_DIR} include)
 
 
@@ -31,6 +33,14 @@ set(LIBS ${LIBS}
     ${CFITSIO_LIBRARIES} ${Boost_LIBRARIES} ${ROOT_LIBRARIES} 
     ${PHOTOSPLINE_LIBRARIES} ) 
 
+add_executable(dstcut
+    private/dstcut.cc
+    private/TDST.cxx
+    TDSTDict.cxx
+    private/Position.cxx
+    private/Direction.cxx
+    private/astro.cxx
+    )
 
 add_executable(splinechk
     private/splinechk.cc
@@ -49,6 +59,22 @@ add_executable(make-local-maps
     private/Direction.cxx
     private/astro.cxx
     )
+
+add_executable(make-energy-histos
+    private/make-energy-histos.cc 
+    private/util/cnpy.cc
+    private/histogram.cc
+    private/cuts.cc
+    private/SimpleDST.cc
+    private/SimpleTrigger.cc
+    private/pickle.cc
+    private/iter-lhreco/illh-utils.cc
+    private/solardipole.cc
+    private/Direction.cxx
+    private/astro.cxx
+    )
+
+
 
 add_executable(get_azimuth
     private/get_azimuth.cc
@@ -120,6 +146,12 @@ add_executable(tsmc
             private/solardipole.cc)
 
 
+target_link_libraries(dstcut
+                ${PAL_LIBRARIES} 
+                ${Boost_LIBRARIES} 
+                ${GSL_LIBRARIES} 
+                ${ROOT_LIBRARIES})
+
 target_link_libraries(splinechk
                 ${CFITSIO_LIBRARIES} 
                 ${Boost_LIBRARIES} 
@@ -157,6 +189,28 @@ target_link_libraries(make-local-maps
     ${ROOT_LIBRARIES} 
     ${PAL_LIBRARIES})
 
+target_link_libraries(make-energy-histos
+    ${PHOTOSPLINE_LIBRARIES} photospline 
+    ${HEALPIX-CXX_LIBRARIES} 
+    ${Boost_LIBRARIES} 
+    ${ROOT_LIBRARIES} 
+    ${PAL_LIBRARIES})
+
+
+
+add_executable(multi-llh
+            private/iter-lhreco/multi-llh.cc 
+            private/iter-lhreco/pickle.cc
+            )
+
+add_executable(illh-reco
+            private/iter-lhreco/illh-reco.cc 
+            private/iter-lhreco/pickle.cc
+            private/iter-lhreco/illh-utils.cc
+            )
+
+
+
 target_link_libraries(get_azimuth ${PHOTOSPLINE_LIBRARIES} photospline ${HEALPIX-CXX_LIBRARIES} ${Boost_LIBRARIES} ${ROOT_LIBRARIES} )
 
 target_link_libraries(make-mc-hawc-local-maps ${PHOTOSPLINE_LIBRARIES} photospline ${HEALPIX-CXX_LIBRARIES} ${Boost_LIBRARIES} ${ROOT_LIBRARIES} )
@@ -179,6 +233,28 @@ target_link_libraries(make-random-local-maps
 
 target_link_libraries(fitq ${PHOTOSPLINE_LIBRARIES} photospline ${HEALPIX-CXX_LIBRARIES} ${Boost_LIBRARIES} ${ROOT_LIBRARIES} -lMinuit)
 target_link_libraries(fitd ${PHOTOSPLINE_LIBRARIES} photospline ${HEALPIX-CXX_LIBRARIES} ${Boost_LIBRARIES} ${ROOT_LIBRARIES} -lMinuit)
+
+target_link_libraries(multi-llh 
+                ${CFITSIO_LIBRARIES} 
+                ${HEALPIX-CXX_LIBRARIES} 
+                ${Boost_LIBRARIES})
+
+
+target_link_libraries(illh-reco
+                ${CFITSIO_LIBRARIES} 
+                ${HEALPIX-CXX_LIBRARIES} 
+                ${Boost_LIBRARIES})
+
+
+add_custom_command(
+  OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/TDSTDict.cxx
+  COMMAND rootcint -f ${CMAKE_CURRENT_SOURCE_DIR}/TDSTDict.cxx 
+                ${CMAKE_CURRENT_SOURCE_DIR}/include/TDST.h 
+                ${CMAKE_CURRENT_SOURCE_DIR}/LinkDef.h
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/include/TDST.h 
+          ${CMAKE_CURRENT_SOURCE_DIR}/LinkDef.h
+  VERBATIM)
+#add_library(myLib out.c)
 
 
 
@@ -223,3 +299,23 @@ if(IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/scripts)
 endif (IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/scripts)
 
 
+#
+#  Environment checking targets
+#
+configure_file(${CMAKE_SOURCE_DIR}/cmake/env-check.sh.in
+  ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/env-check.sh
+  @ONLY)
+
+#
+# env-shell.sh
+#
+foreach (file env-shell.sh)
+  message(STATUS "Generating ${file}")
+  configure_file(
+    ${CMAKE_SOURCE_DIR}/cmake/${file}.in
+    ${CMAKE_CURRENT_BINARY_DIR}/${file}
+    @ONLY
+    )
+  execute_process(COMMAND chmod 755 ${CMAKE_BINARY_DIR}/${file})
+  execute_process(COMMAND cp ${CMAKE_BINARY_DIR}/${file} ${NOTES_DIR})
+endforeach (file env-shell.sh)

@@ -9,7 +9,7 @@
 //***********************************************************
 //-- Created: Dusan Turcan, UMD, Sep 2, 2004
 //***********************************************************
-#include <units.h>
+#include "units.h"
 
 // $Id$
 
@@ -254,7 +254,14 @@ class Direction
 
 };
 
+class I3Direction: public Direction {
 
+  public:
+    explicit I3Direction() : Direction() {};
+    explicit I3Direction(double zen, double azi) : Direction(zen,azi) {};
+
+
+};
 
 
 #endif //DIRECTION_H_INCLUDED

@@ -32,6 +32,7 @@
 #include <TChain.h>
 
 #include "cuts.h"
+#include "config.h"
 
 #include <astro/astro.h>
 #include <astro/time.h>
@@ -121,21 +122,25 @@ int main(int argc, char* argv[])
 //*****************************************************************************
     gROOT->SetBatch( 1 );
     std::string foldername;
-    std::string method("sid");
+    std::string smethod("sid");
     std::string config;
     std::string filter;
+    config::method method_;
     unsigned int nTimesteps;
     unsigned int nIterations;
     unsigned int nSectors;
     int nsideOut;
     bool sundp;
     bool show_progress;
-    double lon;
-    double lat;
+    bool costheta;
+    bool rmsid(false);
+    double detlon;
+    double detlat;
     double elogmin, elogmax, rloglmax,ldirmin,ndirmin;
     double slogmin, slogmax;
     std::vector< std::string > input;
     std::string coords = "Azimuth/ Zenith";
+    std::string sidpath; 
     int nEvents = 0;
 
     po::options_description desc("Options"); 
@@ -156,11 +161,15 @@ int main(int argc, char* argv[])
              ("slogmax", po::value<double>(&slogmax)->default_value(0), "Maximum logS125 (0: no cut)")
              ("ldirc_min", po::value<double>(&ldirmin)->default_value(0), "Minimum ldir (0: no cut)")
              ("ndirc_min", po::value<double>(&ndirmin)->default_value(0), "Minimum ndir (0: no cut)")
+             ("costheta", po::bool_switch(&costheta)->default_value(false), "cuts propto costheta")
              ("rloglmax", po::value<double>(&rloglmax)->default_value(0), "Maximum rlogL (0: no cut)")
              ("nsideout", po::value<int>(&nsideOut)->default_value(256), "Healpix Nside for output map") 
              ("sundp", po::bool_switch(&sundp)->default_value(false), "subtract solar dipole")
+             ("remove-sid", po::value<string>(&sidpath), "sidereal distribution to subract (for solar map)")
+             ("lon", po::value<double>(&detlon)->default_value(270.0), "Longitude of detector") 
+             ("lat", po::value<double>(&detlat)->default_value(-90.0), "Latitude of detector")
              ("config", po::value<string>(&config), "Detector configuration") 
-             ("method", po::value<string>(&method), "Sidereal, Anti, Solar, Extended")
+             ("method", po::value<string>(&smethod), "sidereal, anti, solar, ext")
              ("filter", po::value<string>(&filter), "Filter for IceTop data")
              ("progress", po::bool_switch(&show_progress)->default_value(false), "show progress bar")
              ;
@@ -242,6 +251,16 @@ int main(int argc, char* argv[])
     unsigned int nTimeBins = 360;
     // Import data : n_tau_i
     std::vector<SkyMapPtr> Nmap;
+    SkyMapPtr sidereal_map; 
+
+
+    if (vm.count("remove-sid"))  {
+        string sidpath = vm["remove-sid"].as<string>();
+        cout << "reading relint distribution from " << sidpath << "..." ;
+        sidereal_map = load_siderial_map(sidpath.c_str());
+        rmsid = true;
+        cout << "done." << endl;
+    }
 
     for (unsigned int degbin=0;degbin< 360;degbin++) 
     {
@@ -272,6 +291,16 @@ int main(int argc, char* argv[])
     bool init=false;
     SkyMapPtr tmp_map;
 
+    if (smethod == "anti") { 
+        method_ = config::antisid;
+    } else if (smethod == "ext") { 
+        method_ = config::extsid;
+    } else if (smethod == "solar") {
+        method_ = config::solar;
+    } else {
+        method_ = config::sidereal;
+    } 
+ 
 
 
     cout << "Reading " << nEntries << " entries...\n";
@@ -292,11 +321,13 @@ int main(int argc, char* argv[])
        
        double mjd = dst.ModJulDay;
        double lst = GetGMST(mjd);
-       if (method == "anti") { 
+       int mstTimeBin = int( nTimeBins*lst/24.0 ); 
+
+       if (method_ == config::antisid) { 
            lst = GetGMAST(mjd); 
-       } else if (method == "ext") { 
+       } else if (method_ == config::extsid) { 
            lst = GetGMEST(mjd);
-       } else if (method == "solar") {
+       } else if (method_ == config::solar) {
            lst= ( mjd - int(mjd) )* 24.; 
        }
  
@@ -307,10 +338,14 @@ int main(int argc, char* argv[])
        azimuth = dst.LLHAzimuthDeg/180.*M_PI; 
        zenith = dst.LLHZenithDeg/180.*M_PI; 
 
-       if ( dst.NDirHits < ndirmin*cos(zenith) ) 
-          continue;
+       if ( costheta && (dst.NDirHits < ndirmin*cos(zenith) ) )
+           continue;
+       else if ( dst.NDirHits < ndirmin ) 
+           continue;
 
-       if ( dst.LDir < ldirmin*cos(zenith) ) 
+       if ( costheta && (dst.LDir < ldirmin*cos(zenith) ) )
+           continue;
+       else if ( dst.LDir < ldirmin ) 
            continue;
 
        // Reconstruction cuts
@@ -331,21 +366,27 @@ int main(int argc, char* argv[])
        if (detector == "IT" &&  !ITs125Cut(dst, slogmin,slogmax))
            continue;
 
-       
        pointing pt(zenith, azimuth);
-
        eventweight = 1.0;
+
        if (sundp) { 
            Direction dir(zenith,azimuth);
            Equatorial eq = GetEquatorialFromDirection(dir, mjd);
-
            eventweight = solar_dipole(mjd, eq.ra, eq.dec,true); 
+       } else if (rmsid) { 
+           int l = sidereal_map->ang2pix(pt);
+           int k = illh::eq2loc_idx(l, mstTimeBin, detlat, detlon, nTimeBins, *sidereal_map); 
+           eventweight = (1-(*sidereal_map)[k]);
        }
-       weightsum += eventweight;
-
        tmp_map = Nmap[timeBin % 360];// make sure tsid < 360 deg
+
+       while (pt.phi < 0)
+          pt.phi += 2.*constants::pi;
+
        int j = tmp_map->ang2pix(pt);
        (*tmp_map)[j] += eventweight; 
+       weightsum += eventweight;
+
        nEvents++;
 
     }

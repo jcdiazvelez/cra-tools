@@ -83,6 +83,9 @@ if __name__ == "__main__":
     p.add_argument('--elogmin', dest='elogmin',
             default=0.0,
             help='min log energy/GeV')
+    p.add_argument('--costheta', dest='costheta',
+            default=False, action='store_true',
+            help='Option to cut on ndir and ldir propto costheta')
     p.add_argument('--ndirc_min', dest='ndirc_min',
             default=9,
             help='min ndir value')
@@ -95,6 +98,11 @@ if __name__ == "__main__":
     p.add_argument('--nside', dest='nsideout',
             default=64,
             help='Healpix NSide parameter')
+    p.add_argument('--method', dest='method',
+             default='sid',
+             help="sid, anti, solar, ext")
+    p.add_argument('--remove-sid', dest='sidpath', default=None,
+             help="sidereal distribution to subract (for solar map)")
     p.add_argument('--condor-priority', dest='priority',
             default=1, 
             help='Job priority in condor')
@@ -120,6 +128,8 @@ if __name__ == "__main__":
     if args.sundp:
        outBase += '_sd'
     c_opts['outBase'] = outBase
+    if args.sidpath:
+        c_opts['remove-sid'] = args.sidpath
 
     # Create output directories if they don't already exist
     if not os.path.isdir('{outBase}'.format(**c_opts)):
@@ -183,7 +193,7 @@ if __name__ == "__main__":
 
     # Set up parameters to feed C++ script
     print('Parameters for submission:')
-    validArgs  = ['config','ndirc_min','ldirc_min','elogmax','elogmin','rloglmax','spline','nsideout']
+    validArgs  = ['config','ndirc_min','ldirc_min','elogmax','elogmin','rloglmax','spline','nsideout','method']
     c_opts = {k:v for k,v in c_opts.items() if v!=None and k in validArgs}
     for key in sorted(c_opts.keys()):
         print('  --%s %s' % (key, c_opts[key]))

@@ -10,6 +10,12 @@
  *
  */
 bool ICenergyCut(SimpleDST dst, photospline::splinetable<> &spline, double zenith, double emin, double emax);
+
+/**
+ *	Spline-based energy reconstruction for In-Ice SimpleDST
+ *
+ */
+double ICenergy(SimpleDST dst, photospline::splinetable<> &spline, double zenith);
 #endif // __cplusplus
 
 

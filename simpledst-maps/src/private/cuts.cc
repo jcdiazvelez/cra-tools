@@ -34,6 +34,29 @@ bool ICenergyCut(SimpleDST dst, photospline::splinetable<> &spline, double zenit
   return ((median >= emin) && (median < emax));
 }
 
+double ICenergy(SimpleDST dst, photospline::splinetable<> &spline, double zenith) {
+
+  // Setup basic parameters
+  double x = cos(zenith);
+  double y = log10(dst.NChannels);
+
+  // Boundary check (energy cut tables go to 0.3 in cos(zenith))
+  if (x < 0.3)
+    return -1;
+
+  // Catch additional outliers
+  double coords[2] = {x, y};
+  int centers[spline.get_ndim()];
+  if (!spline.searchcenters(coords, centers)) {
+    std::cout << "Variables outside of table boundaries" << std::endl;
+    std::cout << "x: " << x << " y: " << y << std::endl;
+    return -1;
+  }
+
+  // Calculate reconstructed energy
+  return spline.ndsplineeval(coords, centers, 0);
+}
+
 
 int ITenergyCut(SimpleDST dst, double emin, double emax) {
 

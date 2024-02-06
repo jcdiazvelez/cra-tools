@@ -66,8 +66,8 @@ chi2(int& npar, double* gin, double& f, double* par, int iflag)
 
 int main(int argc, char* argv[])
 {
-  if (argc != 3) {
-    cerr << "\nUsage: " << argv[0] << " [bkg.FITS] [dat.FITS]\n\n";
+  if (argc != 2) {
+    cerr << "\nUsage: " << argv[0] << " [FITS]\n\n";
     return 1;
   }
 
@@ -75,8 +75,12 @@ int main(int argc, char* argv[])
   HMap dat;
 
   // Read in the relative intensity map
-  read_Healpix_map_from_fits(argv[1], bkg);
-  read_Healpix_map_from_fits(argv[2], dat);
+  fitshandle handle;
+  handle.open(argv[1]);
+  handle.goto_hdu(2);
+  read_Healpix_map_from_fits(handle, dat, 1);
+  read_Healpix_map_from_fits(handle, bkg, 2);
+  handle.close();
 
   map.SetNside(bkg.Nside(), bkg.Scheme());
   mapVar.SetNside(bkg.Nside(), bkg.Scheme());
@@ -93,10 +97,10 @@ int main(int argc, char* argv[])
   int npix = 0;
   double Nb;
   double Nd;
-  double minZ = sin(-90*degree);
-  double maxZ = sin(70*degree);
-  //const double alpha = 1./20.;
-  const double alpha = 1.;
+  double minZ = sin(-89*degree);
+  double maxZ = sin(-23.5*degree);
+  const double alpha = 1./20.;
+  //const double alpha = 1.;
   vec3 v;
 
   for (int i = 0; i < bkg.Npix(); ++i) {
@@ -104,12 +108,13 @@ int main(int argc, char* argv[])
     if ( v.z >= minZ && v.z <= maxZ) {
 
       Nb = bkg[i];
-      map[i] = dat[i];
-      Nd = Nb*(1.-map[i]);
+      Nd = dat[i];
+      map[i] = (Nd - Nb) / Nb;
+      //cout << Nd << ", " << Nb << ", " << map[i] << endl;
       npix++;
       if (Nb > 0){
-         //mapVar[i] = Nd*(Nb + alpha*Nd) / (Nb*Nb*Nb);
-         mapVar[i] = 1.0/Nb;
+         mapVar[i] = Nd*(Nb + alpha*Nd) / (Nb*Nb*Nb);
+         //mapVar[i] = 1.0/Nb;
       }
       if (map[i] != map[i])
         map[i] = 0.;
@@ -152,7 +157,7 @@ int main(int argc, char* argv[])
   minuit.mnexcm("SET STR", argList, 2, iErrFlag);
 
   // Set up MIGRAD to iterate up to 1000 times
-  argList[0] = 1000;
+  argList[0] = 10000;
   minuit.mnexcm("MIGRAD", argList, 1, iErrFlag);
 
   // Scan about the global minimum
@@ -184,8 +189,8 @@ int main(int argc, char* argv[])
   minuit.GetParameter(7, Q4, dx);
   minuit.GetParameter(8, Q5, dx);
   
-  minZ = sin(-90*degree);
-  maxZ = sin(70*degree);
+  minZ = sin(-89*degree);
+  maxZ = sin(-25*degree);
 
   double chi2sum = 0.;
   for (int i = 0; i < mapRes.Npix(); ++i) {

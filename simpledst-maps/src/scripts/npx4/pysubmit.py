@@ -104,6 +104,7 @@ def pysubmit(executable, jobID=None, outdir='/home/fmcnally/npx4',
         "output = %s/npx4-out/%s.out" % (outdir, jobID),
         "error = %s/npx4-error/%s.error" % (outdir, jobID),
         "notification = %s" % notification,
+        "should_transfer_files = YES",
         "priority =%s" %priority,
         "queue"
     ]
