@@ -324,6 +324,10 @@ int main(int argc, char* argv[])
        
        pointing pt(zenith, azimuth);
 
+       // Check if angle above pi
+       if(pt.theta > 3.141592) 
+           continue;
+
        eventweight = 1.0;
        if (sundp) { 
            Direction dir(zenith,azimuth);
