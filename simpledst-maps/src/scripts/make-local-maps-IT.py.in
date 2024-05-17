@@ -15,7 +15,9 @@ the word 'CHANGE'.
 
 def getDSTfiles(config):
 
-    fpath = '/data/ana/CosmicRay/Anisotropy/IceTop/ITpass2'
+    # CHANGE
+    #fpath = '/data/ana/CosmicRay/Anisotropy/IceTop/ITpass2'
+    fpath = '/data/user/@USER_DIR@/burnsamplemaps'
     fileList = glob.glob('{}/*.root'.format(fpath))
     # Newer years have part files nested in daily folders
     if fileList == []:
@@ -59,7 +61,7 @@ if __name__ == "__main__":
 
     # Additional options
     p.add_argument('-o', '--outdir', dest='outdir',
-            # CHANGE: suggested path: /data/user/[username]/maps
+            # CHANGE: suggested path: /data/user/[username]/tier_X for each tier
             default='/data/ana/CosmicRay/Anisotropy/IceTop/ITpass2/output/@USER_DIR@',
             help='Destination directory for output files')
     p.add_argument('--test', dest='test',

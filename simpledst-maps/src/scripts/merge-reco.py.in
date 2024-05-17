@@ -181,6 +181,8 @@ if __name__ == "__main__":
 
     if args.smax > 0:
         s_opts["srange"] = "_{smin:d}-{smax:d}S".format(**s_opts)
+    else:
+        s_opts["srange"] = "*"
     infile_prefix = "CR_{detector}_LOCAL{erange}{srange}_NSIDE{nsideout}_degbin-"
     infile = infile_prefix+"{degbin:03d}.fits.gz"
 
