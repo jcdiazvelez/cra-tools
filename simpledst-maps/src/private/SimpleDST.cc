@@ -34,7 +34,10 @@ SimpleDST::SetupChain(TChain* chain, std::string config)
     if (config == "IT81-2013")
       reco = "LaputopStandard";
     else if (config == "ITpass2")
-      reco = "LaputopSmall";
+      // EDIT TO CORRECT RECONSTRUCTION
+      //reco = "LaputopSmall";
+      reco = "Laputop"
+      //reco = "ShowerPlane"
 
     std::string recoazstr(reco + ".azimuth");
     std::string recozstr(reco + ".zenith");
@@ -82,7 +85,7 @@ SimpleDST::SetupChain(TChain* chain, std::string config)
     //Laputop values
     if (config == "ITpass2"){
         chain->SetBranchAddress("LaputopParams.s125", &s125, &b_s125);
-        chain->SetBranchAddress("LaputopSmallParams.s125", &ss125, &b_ss125);
+        //chain->SetBranchAddress("LaputopSmallParams.s125", &ss125, &b_ss125);
     } else {
         chain->SetBranchAddress("LaputopStandardParams.s125", &s125, &b_s125);
         chain->SetBranchAddress("LaputopSmallShowerParams.s125", &ss125, &b_ss125);
