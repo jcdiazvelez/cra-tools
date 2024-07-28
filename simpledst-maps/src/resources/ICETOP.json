@@ -3,9 +3,9 @@
   [
     {
       "name":"IceTop",
-      "longitude":-90.0,
+      "longitude":270.0,
       "latitude":-90.0,
-      "thetamax":90.0,
+      "thetamax":70.0,
       "prefix":"/data/sim/sim-new/test/local-maps/ITpass2/combined/CR_ICECUBE_LOCAL_NSIDE64_degbin-",
       "suffix":".fits.gz"
     }
