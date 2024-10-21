@@ -123,6 +123,7 @@ def pysubmit(executable, jobID=None, outdir='/home/fmcnally/npx4',
         with open(condor_dag, 'a') as f:
             f.writelines([
                 "JOB D{} {}\n".format(jobID,condor_script), 
-                "Retry D{} 3\n".format(jobID)])
+                "Retry D{} 3\n".format(jobID), #Add hold command below
+                "SCRIPT HOLD D{id} {sub}/../on_hold.sh D{id}\n".format(id = jobID, sub = outdir)])
     else:
         os.system('condor_submit %s' % condor_script)

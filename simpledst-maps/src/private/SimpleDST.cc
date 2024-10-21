@@ -34,10 +34,10 @@ SimpleDST::SetupChain(TChain* chain, std::string config)
     if (config == "IT81-2013")
       reco = "LaputopStandard";
     else if (config == "ITpass2")
-      // EDIT TO CORRECT RECONSTRUCTION
+      // EDIT TO APPROPRIATE RECONSTRUCTION
       //reco = "LaputopSmall";
-      reco = "Laputop"
-      //reco = "ShowerPlane"
+      reco = "Laputop";
+      //reco = "ShowerPlane";
 
     std::string recoazstr(reco + ".azimuth");
     std::string recozstr(reco + ".zenith");
