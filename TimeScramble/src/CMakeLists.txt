@@ -15,7 +15,7 @@ FIND_PACKAGE(HEALPIX REQUIRED)
 FIND_PACKAGE(CFITSIO REQUIRED)
 #FIND_PACKAGE(Boost REQUIRED)
 #FIND_PACKAGE(Boost COMPONENTS system filesystem program_options REQUIRED)
-FIND_PACKAGE(Boost 1.36.0 COMPONENTS system filesystem program_options iostreams REQUIRED)
+FIND_PACKAGE(Boost 1.36.0 COMPONENTS system filesystem program_options iostreams log REQUIRED)
 FIND_PACKAGE(ROOT)
 #FIND_PACKAGE(PHOTOSPLINE)
 FIND_PACKAGE(photospline REQUIRED)
@@ -52,9 +52,9 @@ add_executable(checksd
             private/SimpleTrigger.cc
             private/SimpleDST.cc)
 
-add_executable(tsmc
-            private/tsmc.cxx
-            private/solardipole.cc)
+#add_executable(tsmc
+#            private/tsmc.cxx
+#            private/solardipole.cc)
 
 
  
@@ -75,12 +75,12 @@ target_link_libraries(checksd
                 ${PHOTOSPLINE_LIBRARIES}
                 ${ROOT_LIBRARIES})
 
-target_link_libraries(tsmc
-                ${PAL_LIBRARIES} 
-                ${CFITSIO_LIBRARIES} 
-                ${HEALPIX-CXX_LIBRARIES} 
-                ${Boost_LIBRARIES} 
-                ${PHOTOSPLINE_LIBRARIES} -lboost_log)
+#target_link_libraries(tsmc
+#                ${PAL_LIBRARIES} 
+#                ${CFITSIO_LIBRARIES} 
+#                ${HEALPIX-CXX_LIBRARIES} 
+#                ${Boost_LIBRARIES} 
+#                ${PHOTOSPLINE_LIBRARIES} -lboost_log)
 
 
 configure_file(${CMAKE_SOURCE_DIR}/scripts/maker.py.in
