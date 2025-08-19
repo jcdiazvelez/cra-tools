@@ -5,6 +5,7 @@
 #include <vector>
 #include <chrono>
 #include <random>
+#include <cmath>
 
 #include <healpix_cxx/fitshandle.h>
 #include <healpix_cxx/healpix_map.h>
@@ -61,12 +62,22 @@ json::value load_json_file_gz(const string &filename) {
     buffer.insert(buffer.end(), temp, temp + in.gcount());
   }
 
-  return json::parse({buffer.data(), buffer.size()});
+  // Allow NaN and Infinity
+  json::parse_options opts;
+  opts.allow_infinity_and_nan = true;
+
+  return json::parse({buffer.data(), buffer.size()}, {}, opts);
 }
 
 
 // Event cuts
 bool quality_cuts_passed(const json::object &event) {
+
+  // Temporary(?): event with NaN value had no nchannel value
+  if (!event.contains("nchannel")) {
+    cout << "FOUND ONE" << endl;
+    return false;
+  }
 
   // NChannel cut
   int nchannel = event.at("nchannel").as_int64();
@@ -84,7 +95,7 @@ bool quality_cuts_passed(const json::object &event) {
 
   // Reconstruction cuts
   // NOTE: this used to include an IsGoodLineFit or something similar. Discuss
-  if (zenith != zenith || azimuth != azimuth) {
+  if (isnan(zenith) || isnan(azimuth)) {
       return false;
   }
   return true;
