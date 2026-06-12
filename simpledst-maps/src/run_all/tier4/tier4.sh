@@ -5,7 +5,7 @@ function run_makemaps {
     options=$2
 
     # Run the script to produce the dag files.
-    command="python ../../scripts/make-local-maps-IT.py.in -c ITpass2 --method anti -o /data/user/gagrawal/anti/tier4 $options"
+    command="python ../../scripts/make-local-maps-IT.py.in -c ITpass2 -o /data/user/@USER_DIR@/tier4 $options"
     $command
 
     # Submit the dag file for each year to condor. This will produce 360 fits files for each day in the tier.

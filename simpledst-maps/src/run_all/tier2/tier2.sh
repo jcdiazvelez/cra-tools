@@ -5,7 +5,7 @@ function run_makemaps {
     options=$2
 
     # Run the script to produce the dag files.
-    command="python ../../scripts/make-local-maps-IT.py.in -c ITpass2 --method anti -o /data/user/gagrawal/anti/tier2 $options"
+    command="python ../../scripts/make-local-maps-IT.py.in -c ITpass2 -o /data/user/@USER_DIR@/tier2 $options"
     $command
 
     # Submit the dag file for each year to conodr. This will create 360 fits files for each day in this tier.
@@ -16,7 +16,7 @@ function run_makemaps {
 # Define the options for each year
 declare -A options_per_year
 options_per_year[2011]="-d 20110513 20120512 -i --smin 5 --smax 10 --submit_dir ./submit_2011"
-options_per_year[2012]="-d 20120513 20130412 -i --smin 5 --smax 9 --submit_dir ./submit_2012"
+options_per_year[2012]="-d 20120513 20130512 -i --smin 5 --smax 9 --submit_dir ./submit_2012"
 options_per_year[2013]="-d 20130513 20140512 -i --smin 5 --smax 9 --submit_dir ./submit_2013"
 options_per_year[2014]="-d 20140513 20150512 -i --smin 5 --smax 8 --submit_dir ./submit_2014"
 
