@@ -1,5 +1,5 @@
 #include <SimpleDST.h>
-#include <SimpleTrigger.h>
+#include <config.h>
 
 #include <TChain.h>
 #include <TH1D.h>
@@ -39,13 +39,8 @@ const Double_t millisecond = 1e-3 * second;
 const Double_t microsecond = 1e-6 * second;
 
 void tScramble(po::variables_map vm, vector<string> inFiles);
-//void tScramble(po::variables_map vm, const char* inFilesStr);
-//void tScramble(po::variables_map vm);
 bool newConfig(string config);
-bool filterCut(po::variables_map vm, SimpleDST dst);
-int ITenergyCut(po::variables_map vm, SimpleDST dst, vector<float> ebins);
 int ITs125Cut(po::variables_map vm, SimpleDST dst, vector<float> sbins);
-//int ICenergyCut(po::variables_map vm, SimpleDST dst, struct splinetable table, double zenith, vector<float> ebins);
 int ICenergyCut(po::variables_map vm, SimpleDST dst, photospline::splinetable<> &table, double zenith, vector<float> ebins);
 
 int main(int argc, char* argv[]) {
@@ -67,7 +62,6 @@ int main(int argc, char* argv[]) {
       // IceCube specific options
       ("spline", po::value<string>(), "File containing spline tables")
       // Icetop specific options
-      ("filter", po::value<string>(), "Filter for IceTop data")
       ("comp", po::value< vector<string> >()->multitoken(), "Comp bins")
       ("sbins", po::value< vector<string> >()->multitoken(), "S125 bins")
       ("emin", po::value<string>(), "Minimum reconstructed energy")
@@ -229,14 +223,11 @@ void tScramble(po::variables_map vm, vector<string> inFiles_) {
   double MJD0 = t.GetMJD();
 
   const char* masterTree;
-  const char* triggerTree;
   if (detector == "IC") {
     masterTree = "CutDST";
-    triggerTree = "TDSTTriggers";
   }
   if (detector == "IT") {
     masterTree = "master_tree";
-    triggerTree = "";   // Unused? Will probably break IT functionality...
   }
 
   // Initialize the chain and read data
@@ -245,17 +236,6 @@ void tScramble(po::variables_map vm, vector<string> inFiles_) {
     cutDST->Add(inFiles_[i].c_str());
   }
   SimpleDST dst(cutDST, config);
-
-  // Need to also initialize triggers if IC86-2016 or newer
-  TChain *trigDST = new TChain(triggerTree);
-  //TChain *trigDST;
-  if (newConfig(config)) {
-    for (unsigned i = 0; i < inFiles_.size(); ++i) {
-      trigDST->Add(inFiles_[i].c_str());
-    }
-  }
-  SimpleTrigger dst_trig(trigDST);
-
 
   cout << "Number of chained files: " << cutDST->GetNtrees() << endl;
 
@@ -269,7 +249,7 @@ void tScramble(po::variables_map vm, vector<string> inFiles_) {
 
   Double_t startMJD, mjd2, mjd1=0;
   double zenith, azimuth, theta, phi, rndMJD;
-  bool isGood;
+  bool isGood, fitPassed;
 
   // Integration time
   const Double_t dt = nInt * hour;
@@ -312,10 +292,6 @@ void tScramble(po::variables_map vm, vector<string> inFiles_) {
   for (Long64_t jentry=0; jentry<nEntries; ++jentry) {
 
     cutDST->GetEntry(jentry);
-    if (newConfig(config)) {
-      trigDST->GetEntry(jentry);
-    }
-    
 
     // Basic time check
     if (dst.ModJulDay < mjd1) {
@@ -348,10 +324,12 @@ void tScramble(po::variables_map vm, vector<string> inFiles_) {
     if (detector == "IC") {
       zenith = dst.LLHZenithDeg * deg2rad;
       azimuth = dst.LLHAzimuthDeg * deg2rad;
+      fitPassed = dst.isReco;
     }
     if (detector == "IT") {
-      zenith = dst.Zenith;
-      azimuth = dst.Azimuth;
+      zenith = dst.SPZenith;
+      azimuth = dst.SPAzimuth;
+      fitPassed = (dst.SPFitStatus == 0);
     }
 
     // SimpleDST cuts (automatically included in Segev-processed files)
@@ -363,27 +341,12 @@ void tScramble(po::variables_map vm, vector<string> inFiles_) {
     if (zenith < zLo || zenith > zHi) {
       isGood = false;
     }
-    // Second: require SMT08 trigger
-    if (newConfig(config)) {
-      if (dst_trig.TriggID_1006 == 0) {
-        isGood = false;
-      }
-    }
 
     // Reconstruction cuts
-    if (!dst.isReco || zenith != zenith || azimuth != azimuth)
+    if (!fitPassed || std::isnan(zenith) || std::isnan(azimuth))
       isGood = false;
 
-    // IceTop filter cut
-    if (vm.count("filter")) {
-      temp = filterCut(vm, dst);
-      if (not temp)
-        isGood = false;
-    }
-
     // Energy cuts for IceTop and IceCube
-    if (detector == "IT" && vm.count("ebins"))
-      mapIdx = ITenergyCut(vm, dst, ebins);
     if (vm.count("spline"))
       mapIdx = ICenergyCut(vm, dst, spline, zenith, ebins);
     if (vm.count("sbins"))
@@ -584,9 +547,6 @@ void tScramble(po::variables_map vm, vector<string> inFiles_) {
 
   // Clean up
   delete cutDST;
-  if (newConfig(config)) {
-    delete trigDST;
-  }
   for (unsigned m=0; m<nMaps; ++m)
     delete histMJD[m];
 
@@ -606,26 +566,6 @@ bool newConfig(string config) {
 }
 
 
-bool filterCut(po::variables_map vm, SimpleDST dst) {
-
-  string filter = vm["filter"].as<string>();
-  string config = vm["config"].as<string>();
-  if (filter=="STA3" && dst.isSTA3)
-    return true;
-  if (config=="IT59" || config=="IT73" || config=="IT81") {
-    if ((filter=="STA8" && dst.isSTA8) ||
-        (filter=="NotSTA8" && dst.isSTA3 && !dst.isSTA8))
-      return true;
-  }
-  if (config=="IT81-2012" || config=="IT81-2013") {
-    if ((filter=="STA8" && dst.nStations>=8) ||
-        (filter=="NotSTA8" && dst.isSTA3 && dst.nStations<8))
-      return true;
-  }
-  return false;
-}
-
-//int ICenergyCut(po::variables_map vm, SimpleDST dst, splinetable t, double zenith, vector<float> ebins) {
 int ICenergyCut(po::variables_map vm, SimpleDST dst, photospline::splinetable<> &spline, double zenith, vector<float> ebins) {
 
   // Setup basic parameters
@@ -654,24 +594,6 @@ int ICenergyCut(po::variables_map vm, SimpleDST dst, photospline::splinetable<> 
   // Get energy bin
   int ebin = 0;
   while (median > ebins[ebin+1])
-    ebin += 1;
-
-  return ebin;
-}
-
-int ITenergyCut(po::variables_map vm, SimpleDST dst, vector<float> ebins) {
-
-  // Get most likely energy value
-  double llhEnergy = (dst.pLLH >= dst.fLLH) ? dst.pEnergy : dst.fEnergy;
-  double logEnergy = log10(llhEnergy);
-
-  // Make sure we're in the energy bin range
-  if ((logEnergy < ebins[0]) || (logEnergy > ebins.back()))
-    return -1;
-
-  // Get energy bin
-  int ebin = 0;
-  while (logEnergy > ebins[ebin+1])
     ebin += 1;
 
   return ebin;

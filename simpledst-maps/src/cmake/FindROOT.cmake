@@ -52,30 +52,30 @@ ROOTVERSION)
   MESSAGE(STATUS "Looking for Root... - found $ENV{ROOTSYS}/bin/root")
   MESSAGE(STATUS "Looking for Root... - version ${ROOTVERSION} ")   
 
-  # we need at least version 5.00/00
+  # we need at least version 5.00.00
   IF (NOT ROOT_MIN_VERSION)
-    SET(ROOT_MIN_VERSION "5.00/00")
+    SET(ROOT_MIN_VERSION "5.00.00")
   ENDIF (NOT ROOT_MIN_VERSION)
    
   # now parse the parts of the user given version string into variables
-  STRING(REGEX REPLACE "^([0-9]+)\\.[0-9][0-9]+\\/[0-9][0-9]+" "\\1"
+  STRING(REGEX REPLACE "^([0-9]+)\\.[0-9][0-9]+\\.[0-9][0-9]+" "\\1"
 req_root_major_vers "${ROOT_MIN_VERSION}")
-  STRING(REGEX REPLACE "^[0-9]+\\.([0-9][0-9])+\\/[0-9][0-9]+.*" "\\1"
+  STRING(REGEX REPLACE "^[0-9]+\\.([0-9][0-9])+\\.[0-9][0-9]+.*" "\\1"
 req_root_minor_vers "${ROOT_MIN_VERSION}")
-  STRING(REGEX REPLACE "^[0-9]+\\.[0-9][0-9]+\\/([0-9][0-9]+)" "\\1"
+  STRING(REGEX REPLACE "^[0-9]+\\.[0-9][0-9]+\\.([0-9][0-9]+)" "\\1"
 req_root_patch_vers "${ROOT_MIN_VERSION}")
    
   # and now the version string given by qmake
-  STRING(REGEX REPLACE "^([0-9]+)\\.[0-9][0-9]+\\/[0-9][0-9]+.*" "\\1"
+  STRING(REGEX REPLACE "^([0-9]+)\\.[0-9][0-9]+\\.[0-9][0-9]+.*" "\\1"
 found_root_major_vers "${ROOTVERSION}")
-  STRING(REGEX REPLACE "^[0-9]+\\.([0-9][0-9])+\\/[0-9][0-9]+.*" "\\1"
+  STRING(REGEX REPLACE "^[0-9]+\\.([0-9][0-9])+\\.[0-9][0-9]+.*" "\\1"
 found_root_minor_vers "${ROOTVERSION}")
-  STRING(REGEX REPLACE "^[0-9]+\\.[0-9][0-9]+\\/([0-9][0-9]+).*" "\\1"
+  STRING(REGEX REPLACE "^[0-9]+\\.[0-9][0-9]+\\.([0-9][0-9]+).*" "\\1"
 found_root_patch_vers "${ROOTVERSION}")
 
   IF (found_root_major_vers LESS 5)
     MESSAGE( FATAL_ERROR "Invalid ROOT version \"${ROOTERSION}\", at least
-major version 4 is required, e.g. \"5.00/00\"")
+major version 4 is required, e.g. \"5.00.00\"")
   ENDIF (found_root_major_vers LESS 5)
 
   # compute an overall version number which can be compared at once

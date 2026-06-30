@@ -26,7 +26,7 @@
 #include <iterator>
 #include <vector>
 
-#include <iter-lhreco-proj/pickle.h>
+#include <pickle.h>
 #include "TFile.h"
 #include "TTree.h"
 #include <TChain.h>
@@ -71,25 +71,6 @@ Sum(const SkyMap& map,unsigned int npix)
     return sumval;
 }
 
-bool filterCut(po::variables_map vm, SimpleDST dst) {
-
-  string filter = vm["filter"].as<string>();
-  string config = vm["config"].as<string>();
-  if (filter=="STA3" && dst.isSTA3)
-    return true;
-  if (config=="IT59" || config=="IT73" || config=="IT81") {
-    if ((filter=="STA8" && dst.isSTA8) ||
-        (filter=="NotSTA8" && dst.isSTA3 && !dst.isSTA8))
-      return true;
-  }
-  if (config=="IT81-2012" || config=="IT81-2013") {
-    if ((filter=="STA8" && dst.nStations>=8) ||
-        (filter=="NotSTA8" && dst.isSTA3 && dst.nStations<8))
-      return true;
-  }
-  return false;
-}
-
 
 
 int main(int argc, char* argv[])
@@ -100,7 +81,6 @@ int main(int argc, char* argv[])
     std::string foldername;
     std::string method("sid");
     std::string config;
-    std::string filter;
     unsigned int nTimesteps;
     unsigned int nIterations;
     unsigned int nSectors;
@@ -140,7 +120,6 @@ int main(int argc, char* argv[])
              ("sundp", po::bool_switch(&sundp)->default_value(false), "subtract solar dipole")
              ("config", po::value<string>(&config), "Detector configuration") 
              ("method", po::value<string>(&method), "Sidereal, Anti, Solar, Extended")
-             ("filter", po::value<string>(&filter), "Filter for IceTop data")
              ;
      
         //po::store(po::parse_command_line(argc, argv, desc),  vm); // can throw 
@@ -305,16 +284,10 @@ int main(int argc, char* argv[])
                if (!dst.isReco || zenith != zenith || azimuth != azimuth) 
                    continue;
 
-               // IceTop filter cut
-               if (vm.count("filter") && !filterCut(vm, dst)) 
-                   continue;
-               
+               // Energy cut for IceCube
                if (vm.count("spline") && !ICenergyCut(dst, spline, zenith, elogmin, elogmax))
                   continue;
 
-               // Energy cuts for IceTop and IceCube
-               if (detector == "IT" && !ITenergyCut(dst, elogmin,elogmax)) 
-                   continue;
 
                pointing pt(zenith, azimuth);
 

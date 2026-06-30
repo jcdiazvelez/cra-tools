@@ -40,13 +40,14 @@ if __name__ == "__main__":
     """
 
     
-    outdir = "/data/user/juancarlos/anisotropy/IceCube/localmaps/all-years/newcuts/N64/"
+    outdir = "/data/user/juancarlos/anisotropy/IceCube/localmaps/all-years/newcuts-v2/N64/"
     call(["mkdir", "-p", outdir])
 
     files = glob.glob("/data/ana/CosmicRay/Anisotropy/IceCube/IC86-2015/simple-dst/ic86_simpleDST_*.root")
     files += glob.glob("/data/ana/CosmicRay/Anisotropy/IceCube/IC86-2014/simple-dst/ic86_simpleDST_*.root")
     files += glob.glob("/data/ana/CosmicRay/Anisotropy/IceCube/IC86-2013/simple-dst/ic86_simpleDST_*.root")
     files += glob.glob("/data/ana/CosmicRay/Anisotropy/IceCube/IC86-2012/simple-dst/ic86_simpleDST_*.root")
+    #files += glob.glob("/data/ana/CosmicRay/Anisotropy/IceCube/IC86-2011/simple-dst/ic86_simpleDST_*.root")
     files += glob.glob("/data/exp/IceCube/2012/filtered/DST_IC86/simple_dst/ic86_simpleDST_*.root") #2011
 
     for filepath in files:

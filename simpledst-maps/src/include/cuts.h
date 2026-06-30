@@ -14,14 +14,14 @@ bool ICenergyCut(SimpleDST dst, photospline::splinetable<> &spline, double zenit
 
 
 /**
- *	IceTop energy cut
+ *	IceTop NStations cut
  *
  */
-int ITenergyCut(SimpleDST dst, double emin, double emax);
+bool ITNstatCut(SimpleDST dst, double smin, double smax);
 
 /**
  *	IceTop s125 cut
  *
  */
-int ITs125Cut(SimpleDST dst, double smin, double smax);
+bool ITs125Cut(SimpleDST dst, double smin, double smax);
 #endif // ESPLINES
