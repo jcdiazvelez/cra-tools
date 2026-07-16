@@ -123,7 +123,7 @@ int main(int argc, char* argv[])
              ("sundp", po::bool_switch(&sundp)->default_value(false), "subtract solar dipole")
              ("config", po::value<string>(&config), "Detector configuration")
              ("method", po::value<string>(&method), "Sidereal, Anti, Solar, Extended")
-             ("dirreco", po::value<string>(&dirreco), "Directional reconstruction (ShowerPlane, Laputop, LaptuopSmall) (IceTop-only)")
+             ("dirreco", po::value<string>(&dirreco), "Directional reconstruction (ShowerPlane, Laputop, LaputopSmall) (IceTop-only)")
              ("progress", po::bool_switch(&show_progress)->default_value(false), "show progress bar")
              ;
 

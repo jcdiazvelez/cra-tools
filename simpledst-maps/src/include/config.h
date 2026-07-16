@@ -37,7 +37,7 @@ class Config {
       int32_t method;
       int32_t reco;
 
-      Config(po::variables_map vm);
+      Config(const po::variables_map& vm);
 
       bool newConfig();
 };

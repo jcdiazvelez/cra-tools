@@ -67,7 +67,6 @@ add_executable(make-random-local-maps
     private/cuts.cc
     private/pickle.cc
     private/SimpleDST.cc
-    private/SimpleTrigger.cc
     private/pickle.cc
     private/solardipole.cc
     private/Direction.cxx
@@ -92,11 +91,11 @@ add_executable(make-mc-hawc-local-maps
 add_executable(TimeScramble
             private/TimeScramble.cc
             private/solardipole.cc
-            private/SimpleTrigger.cc
             private/astro.cxx
             private/time.cxx
             private/Direction.cxx
-            private/SimpleDST.cc)
+            private/SimpleDST.cc
+            private/config.cc)
 
 add_executable(checksd
             private/checksd.cc

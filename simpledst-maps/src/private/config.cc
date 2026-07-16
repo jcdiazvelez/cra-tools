@@ -2,7 +2,7 @@
 #include "config.h"
 
 
-Config::Config(po::variables_map vm) {
+Config::Config(const po::variables_map& vm) {
 
   // Detector configuration, defaults to newer in-ice format
   std::string config;

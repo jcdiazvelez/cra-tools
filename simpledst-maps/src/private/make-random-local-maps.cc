@@ -37,7 +37,6 @@
 #include <astro/time.h>
 #include <Direction.h>
 #include <solardipole.h>
-#include <SimpleTrigger.h>
 
 
 
@@ -57,8 +56,6 @@ using boost::format;
 
 typedef Healpix_Map<double> SkyMap; 
 typedef boost::shared_ptr<SkyMap> SkyMapPtr; // Map shared pointer
-
-bool newConfig(string config);
 
 double 
 Sum(const SkyMap& map,unsigned int npix) 
@@ -153,15 +150,12 @@ int main(int argc, char* argv[])
 ////// Initialize ///////////////////////////////////////////////////////////// 
 //*****************************************************************************
     const char* masterTree;
-    const char* triggerTree;
     string detector = config.substr(0,2); 
     if (detector == "IC") { 
         masterTree = "CutDST"; 
-        triggerTree = "TDSTTriggers"; 
     } 
     if (detector == "IT") { 
         masterTree = "master_tree"; 
-        triggerTree = "";   // Unused? Will probably break IT functionality...  
     }
 
 
@@ -171,14 +165,6 @@ int main(int argc, char* argv[])
         cutDST.Add(input[i].c_str()); 
     } 
     SimpleDST dst(&cutDST, config);
-
-    TChain trigDST(triggerTree);
-    if (newConfig(config)) { 
-        for (unsigned i = 0; i < input.size(); ++i) { 
-            trigDST.Add(input[i].c_str()); 
-        }
-    } 
-    SimpleTrigger dst_trig(&trigDST);
 
     cout << "Number of chained files: " << cutDST.GetNtrees() << endl; 
     Long64_t nEntries = cutDST.GetEntries();
@@ -246,9 +232,6 @@ int main(int argc, char* argv[])
 
             for (int i = 0; i < nEntries; ++i) {
                cutDST.GetEntry(i); 
-               if (newConfig(config)) { 
-                   trigDST.GetEntry(i); 
-               }
 
                if ( (rloglmax > 0 ) && (dst.RLogL > rloglmax) )
                   continue; 
@@ -333,13 +316,5 @@ int main(int argc, char* argv[])
     }
 }
 
-bool newConfig(string config) {
-
-  if (config=="IC86-2011" || config=="IC86-2012" || config=="IC86-2013" || 
-      config=="IC86-2014" || config=="IC86-2015") {
-    return false;
-  }
-  return true;
-}
 
 
