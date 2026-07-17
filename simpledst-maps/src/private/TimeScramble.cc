@@ -24,6 +24,7 @@
 
 #include <boost/program_options.hpp>
 #include <boost/make_shared.hpp>
+#include <boost/filesystem.hpp>
 
 #include <astro/astro.h>
 #include <astro/time.h>
@@ -31,6 +32,7 @@
 #include <solardipole.h>
 
 namespace po = boost::program_options;
+namespace fs = boost::filesystem;
 
 const double hour = 1 / 24.;
 const double second = hour / 3600.;
@@ -564,6 +566,18 @@ int main(int argc, char* argv[]) {
     if (useS125Bins)
       namefits << "_" << opts.sbins[m] << "to" << opts.sbins[m+1] << "s125";
     namefits << ".fits.gz";
+
+    // Create output directory if it does not exist yet
+    fs::path out_directory(opts.outdir);
+    if (!(fs::exists(out_directory))) {
+      std::cout << "Directory " << opts.outdir << " doesn't exist\n";
+      if (fs::create_directory(out_directory))
+          std::cout << "....successfully created!\n";
+    }
+
+    // Overwrite file if it already exists
+    if (fs::exists(namefits.str()))
+         fs::remove(namefits.str());
 
     std::cout << "Writing output to " << namefits.str() << "\n";
     fitshandle fitsOut;
