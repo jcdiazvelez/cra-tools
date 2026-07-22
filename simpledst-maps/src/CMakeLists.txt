@@ -191,9 +191,17 @@ configure_file(${CMAKE_SOURCE_DIR}/scripts/combine-local-maps.py.in
            ${CMAKE_BINARY_DIR}/scripts/combine-local-maps.py
            @ONLY)
 
+configure_file(${CMAKE_SOURCE_DIR}/scripts/time-scramble_IT.py.in
+           ${CMAKE_BINARY_DIR}/scripts/time-scramble_IT.py
+           @ONLY)
+
+#configure_file(${CMAKE_SOURCE_DIR}/scripts/time-scramble_IC.py.in
+#           ${CMAKE_BINARY_DIR}/scripts/time-scramble_IC.py
+#           @ONLY)
+
 if(IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/scripts)
-       exec_program(test ARGS -h ${CMAKE_BINARY_DIR}/scripts/npx4 -a -e ${CMAKE_BINARY_DIR}/scripts/npx4
-            || ln -snf ${CMAKE_SOURCE_DIR}/scripts/npx4 ${CMAKE_BINARY_DIR}/scripts/npx4
+       exec_program(test ARGS -h ${CMAKE_BINARY_DIR}/scripts/submitter -a -e ${CMAKE_BINARY_DIR}/scripts/submitter
+            || ln -snf ${CMAKE_SOURCE_DIR}/scripts/submitter ${CMAKE_BINARY_DIR}/scripts/submitter
             OUTPUT_VARIABLE DEV_NULL)
        install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/scripts
          DESTINATION ${CMAKE_BINARY_DIR}/scripts

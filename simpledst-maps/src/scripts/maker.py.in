@@ -4,8 +4,7 @@ import os, glob, re, argparse
 import datetime as dt
 import random
 
-#sys.path.append('/home/fmcnally/npx4')
-from npx4.pysubmit import pysubmit
+from submitter.pysubmit import pysubmit
 
 def getDSTfiles(config):
 

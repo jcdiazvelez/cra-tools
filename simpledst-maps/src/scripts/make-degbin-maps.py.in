@@ -5,7 +5,7 @@ import datetime as dt
 import random
 from pathlib import Path
 
-from npx4.pysubmit import pysubmit
+from submitter.pysubmit import pysubmit
 
 """ 
 INSTRUCTIONS: before executing, change hardcoded paths anywhere you see 

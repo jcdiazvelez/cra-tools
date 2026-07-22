@@ -56,10 +56,12 @@ struct ProgramOptions {
   std::string method = "sid";
   int resample = 20;
 
+  // NChannel cut for in-ice
+  int nchannel = 10;
+
   // Energy reconstruction
   std::string spline;
   std::vector<float> ebins;
-  std::vector<float> sbins;
 
   // Solar dipole flags
   bool sd = false;
@@ -71,9 +73,7 @@ struct ProgramOptions {
 // NOTES:
 // - suggestions from chatgpt/Claude include:
 //    - avoid reconstructing Direction if it's not lightweight
-//    - 
 
-int IT_s125_bin(const SimpleDST& dst, const std::vector<float>& sbins);
 int IC_energy_bin(const SimpleDST& dst, photospline::splinetable<> &table, double zenith, const std::vector<float>& ebins);
 double time_standard_ra(double mjd, const Equatorial& eq, const Config& cfg);
 SkyMapPtr MakeSkyMap(int nside);
@@ -104,8 +104,8 @@ int main(int argc, char* argv[]) {
           "Base name for output file")
       ("config", po::value<std::string>(&opts.config)
           ->default_value(opts.config),
-          "Detector configuration. Options: IC86 | IT81 (pre-11-year) | "
-          "ITpass2 (11-year+)")
+          "Detector configuration. Options: IC86 (12-year) | "
+          "IT81 (pre-11-year) | ITpass2 (11-year+)")
       ("method", po::value<std::string>(&opts.method)
           ->default_value(opts.method),
           "Time standard (sid|anti|solar|ext)")
@@ -129,16 +129,14 @@ int main(int argc, char* argv[]) {
           "Apply 2nd-order dipole correction")
 
       // IceCube specific options
+      ("nchannel", po::value<int>(&opts.nchannel)
+          ->default_value(opts.nchannel),
+          "Minimum number of DOM hits (in-ice only, shouldn't apply to pass3+)")
       ("spline", po::value<std::string>(&opts.spline),
           "File containing spline tables")
       ("ebins", po::value< std::vector<float> >(&opts.ebins)
           ->multitoken(),
           "Energy bins")
-
-      // Icetop specific options
-      ("sbins", po::value< std::vector<float> >(&opts.sbins)
-          ->multitoken(),
-          "S125 bins")
   ;
 
   po::variables_map vm;
@@ -163,20 +161,14 @@ int main(int argc, char* argv[]) {
 
 
   //=====================================================================//
-  // Setup for binning in energy or S125
+  // Setup for binning in energy
   //=====================================================================//
 
   // Default setup: one map
   unsigned nMaps = 1;
 
-  // Energy and S125
-  const bool useEnergyBins = ( vm.count("ebins") && vm.count("spline") );
-  const bool useS125Bins = vm.count("sbins");
-
-  if (useEnergyBins && useS125Bins)
-      throw std::runtime_error("Critical error: Can't have S125 and Ebins!");
-
   // Additional behavior if binning in energy
+  const bool useEnergyBins = ( vm.count("ebins") && vm.count("spline") );
   photospline::splinetable<> spline;
   if (useEnergyBins) {
 
@@ -195,22 +187,6 @@ int main(int argc, char* argv[]) {
     // Read in spline file for energy lookup
     std::cout << "Reading spline file: " << opts.spline << "\n";
     spline.read_fits(opts.spline.c_str());
-  }
-
-  // Additional behavior if binning in S125
-  if (useS125Bins) {
-
-    // Minimum energy bin size
-    if (opts.sbins.size() < 2)
-      throw std::runtime_error("Critical error: Must be >=2 S125 bins");
-
-    std::cout << "Sbin values:" << "\n";
-    for (float val : opts.sbins)
-        std::cout << val << " ";
-    std::cout << "\n";
-
-    // Update number of maps
-    nMaps = opts.sbins.size() - 1;
   }
 
   std::cout << "Number of maps: " << nMaps << "\n";
@@ -360,6 +336,10 @@ int main(int argc, char* argv[]) {
     // Basic tracking output
     //==================================================================//
 
+    // Make sure events are time-ordered
+    if (dst.ModJulDay < mjd)
+      throw std::runtime_error("Critical error: Events out of time order!");
+
     // Events before start of time window
     mjd = dst.ModJulDay;
     if (mjd < start_mjd) {
@@ -414,13 +394,17 @@ int main(int argc, char* argv[]) {
     if (!fitPassed || std::isnan(zenith) || std::isnan(azimuth))
       event_passed = false;
 
+    // NChannel cut for IceCube
+    if (cfg.detector == Config::IceCube) {
+      if (dst.NChannels < opts.nchannel)
+          event_passed = false;
+    }
+
     // Energy cuts for IceTop and IceCube
     int mapIdx = 0;
     if (useEnergyBins)
       mapIdx = IC_energy_bin(dst, spline, zenith, opts.ebins);
-    if (useS125Bins)
-      mapIdx = IT_s125_bin(dst, opts.sbins);
-    // Energy bin of -1 is outside range
+    // Energy bin of -1 means event is outside the given range
     if (mapIdx == -1)
       event_passed = false;
 
@@ -473,10 +457,6 @@ int main(int argc, char* argv[]) {
           std::cout << "Working on energy bin " << opts.ebins[mEntry] << "-"
                << opts.ebins[mEntry+1] << "GeV...\n";
         }
-        if (useS125Bins) {
-          std::cout << "Working on s125 bin " << opts.sbins[mEntry] << " to "
-               << opts.sbins[mEntry+1] << "s125...\n";
-        }
         nUsedEvents[mEntry] += (nEvents[mEntry]);
 
         // Scramble the time
@@ -513,8 +493,8 @@ int main(int argc, char* argv[]) {
         }
       }
 
-      // If not on the last entry, scrambling triggered by event outside dt
-      if (nevent + 1 != nEntries) {
+      // Catch cases where scrambling is triggered by event outside dt
+      if ( mjd < stop_mjd && nevent + 1 != nEntries ) {
 
         // Update beginning of time-scrambling window
         mjd1 += dt;
@@ -563,15 +543,13 @@ int main(int argc, char* argv[]) {
     namefits << opts.outdir << "/" << opts.outfile;
     if (useEnergyBins)
       namefits << "_" << opts.ebins[m] << "-" << opts.ebins[m+1] << "GeV";
-    if (useS125Bins)
-      namefits << "_" << opts.sbins[m] << "to" << opts.sbins[m+1] << "s125";
     namefits << ".fits.gz";
 
     // Create output directory if it does not exist yet
     fs::path out_directory(opts.outdir);
     if (!(fs::exists(out_directory))) {
       std::cout << "Directory " << opts.outdir << " doesn't exist\n";
-      if (fs::create_directory(out_directory))
+      if (fs::create_directories(out_directory))
           std::cout << "....successfully created!\n";
     }
 
@@ -690,23 +668,4 @@ int IC_energy_bin(const SimpleDST& dst,
   return ebin;
 }
 
-
-// Bin event in S125
-int IT_s125_bin(const SimpleDST& dst, const std::vector<float>& sbins) {
-
-  // Get desired s125 value
-  double s125 = (dst.nStations >= 5) ? dst.s125 : dst.ss125;
-  double logS125 = log10(s125);
-
-  // Make sure we're in the bin range
-  if ((logS125 < sbins[0]) || (logS125 > sbins.back()))
-    return -1;
-
-  // Get s125 bin
-  int sbin = 0;
-  while (logS125 > sbins[sbin+1])
-    sbin += 1;
-
-  return sbin;
-}
 
