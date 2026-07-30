@@ -1,5 +1,4 @@
 #include <SimpleDST.h>
-#include <SimpleTrigger.h>
 
 #include <TChain.h>
 #include <TH1D.h>
@@ -41,7 +40,6 @@ const Double_t microsecond = 1e-6 * second;
 void tScramble(po::variables_map vm, vector<string> inFiles);
 //void tScramble(po::variables_map vm, const char* inFilesStr);
 //void tScramble(po::variables_map vm);
-bool newConfig(string config);
 bool filterCut(po::variables_map vm, SimpleDST dst);
 int ITenergyCut(po::variables_map vm, SimpleDST dst, vector<float> ebins);
 int ITs125Cut(po::variables_map vm, SimpleDST dst, vector<float> sbins);
@@ -229,14 +227,11 @@ void tScramble(po::variables_map vm, vector<string> inFiles_) {
   double MJD0 = t.GetMJD();
 
   const char* masterTree;
-  const char* triggerTree;
   if (detector == "IC") {
     masterTree = "CutDST";
-    triggerTree = "TDSTTriggers";
   }
   if (detector == "IT") {
     masterTree = "master_tree";
-    triggerTree = "";   // Unused? Will probably break IT functionality...
   }
 
   // Initialize the chain and read data
@@ -245,17 +240,6 @@ void tScramble(po::variables_map vm, vector<string> inFiles_) {
     cutDST->Add(inFiles_[i].c_str());
   }
   SimpleDST dst(cutDST, config);
-
-  // Need to also initialize triggers if IC86-2016 or newer
-  TChain *trigDST = new TChain(triggerTree);
-  //TChain *trigDST;
-  if (newConfig(config)) {
-    for (unsigned i = 0; i < inFiles_.size(); ++i) {
-      trigDST->Add(inFiles_[i].c_str());
-    }
-  }
-  SimpleTrigger dst_trig(trigDST);
-
 
   cout << "Number of chained files: " << cutDST->GetNtrees() << endl;
 
@@ -310,10 +294,6 @@ void tScramble(po::variables_map vm, vector<string> inFiles_) {
   for (Long64_t jentry=0; jentry<nEntries; ++jentry) {
 
     cutDST->GetEntry(jentry);
-    if (newConfig(config)) {
-      trigDST->GetEntry(jentry);
-    }
-    
 
     // Basic time check
     if (dst.ModJulDay < mjd1) {
@@ -358,12 +338,6 @@ void tScramble(po::variables_map vm, vector<string> inFiles_) {
     const Double_t zHi = TMath::Pi() - 0.002;    // 179.89 degrees
     if (zenith < zLo || zenith > zHi) {
       isGood = false;
-    }
-    // Second: require SMT08 trigger
-    if (newConfig(config)) {
-      if (dst_trig.TriggID_1006 == 0) {
-        isGood = false;
-      }
     }
 
     // Reconstruction cuts
@@ -580,9 +554,6 @@ void tScramble(po::variables_map vm, vector<string> inFiles_) {
 
   // Clean up
   delete cutDST;
-  if (newConfig(config)) {
-    delete trigDST;
-  }
   for (unsigned m=0; m<nMaps; ++m)
     delete histMJD[m];
 
@@ -591,15 +562,6 @@ void tScramble(po::variables_map vm, vector<string> inFiles_) {
 
 }
 
-
-bool newConfig(string config) {
-
-  if (config=="IC86-2011" || config=="IC86-2012" || config=="IC86-2013" || 
-      config=="IC86-2014" || config=="IC86-2015") {
-    return false;
-  }
-  return true;
-}
 
 
 bool filterCut(po::variables_map vm, SimpleDST dst) {

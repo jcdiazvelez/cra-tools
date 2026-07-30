@@ -7,7 +7,10 @@
 #include "cuts.h"
 
 
-bool ICenergyCut(SimpleDST dst, photospline::splinetable<> &spline, double zenith, double emin, double emax) {
+bool ICenergyCut(
+        SimpleDST dst, 
+        photospline::splinetable<> &spline, 
+        double zenith, double emin, double emax) {
 
   // Setup basic parameters
   double x = cos(zenith);
@@ -35,19 +38,7 @@ bool ICenergyCut(SimpleDST dst, photospline::splinetable<> &spline, double zenit
 }
 
 
-int ITenergyCut(SimpleDST dst, double emin, double emax) {
-
-  // Get most likely energy value
-  double llhEnergy = (dst.pLLH >= dst.fLLH) ? dst.pEnergy : dst.fEnergy;
-  double logEnergy = log10(llhEnergy);
-
-  if (emax <= 0.0)
-    return (logEnergy >= emin);
-  // Get energy bin
-  return ((logEnergy >= emin) && (logEnergy < emax));
-}
-
-int ITs125Cut(SimpleDST dst, double smin, double smax) {
+bool ITs125Cut(SimpleDST dst, double smin, double smax) {
 
   // Get desired s125 value
   double s125 = (dst.nStations >= 5) ? dst.s125 : dst.ss125;
@@ -60,6 +51,15 @@ int ITs125Cut(SimpleDST dst, double smin, double smax) {
 
 }
 
+
+bool ITNstatCut(SimpleDST dst, double smin, double smax) {
+  //high energy is 8<numStat
+  if (!(smax > 0))
+    return (dst.nStations >=smin);
+
+  return ( (dst.nStations >=smin) && (dst.nStations < smax));
+
+}
 
 
 

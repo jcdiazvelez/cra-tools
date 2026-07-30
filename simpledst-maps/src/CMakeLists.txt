@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.0)
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -DBOOST_LOG_DYN_LINK")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
-project(iter-lhreco-proj CXX C)
+#project(iter-lhreco-proj CXX C)
 
 include(pretty)
 include(config)
@@ -38,11 +38,11 @@ add_executable(splinechk
 
 
 
-add_executable(make-local-maps
-    private/make-local-maps.cc 
+add_executable(make-degbin-maps
+    private/make-degbin-maps.cc 
+    private/config.cc
     private/cuts.cc
     private/SimpleDST.cc
-    private/SimpleTrigger.cc
     private/pickle.cc
     private/solardipole.cc
     private/Direction.cxx
@@ -57,16 +57,6 @@ add_executable(get_azimuth
     )
 
 
-
-add_executable(make-sidereal-maps
-    private/make-sidereal-maps.cc 
-    private/cuts.cc
-    private/SimpleDST.cc
-    private/SimpleTrigger.cc
-    private/pickle.cc
-    private/Direction.cxx
-    private/astro.cxx
-    )
 add_executable(combine-local-maps
     private/combine-local-maps.cc 
     private/pickle.cc)
@@ -77,7 +67,6 @@ add_executable(make-random-local-maps
     private/cuts.cc
     private/pickle.cc
     private/SimpleDST.cc
-    private/SimpleTrigger.cc
     private/pickle.cc
     private/solardipole.cc
     private/Direction.cxx
@@ -102,11 +91,11 @@ add_executable(make-mc-hawc-local-maps
 add_executable(TimeScramble
             private/TimeScramble.cc
             private/solardipole.cc
-            private/SimpleTrigger.cc
             private/astro.cxx
             private/time.cxx
             private/Direction.cxx
-            private/SimpleDST.cc)
+            private/SimpleDST.cc
+            private/config.cc)
 
 add_executable(checksd
             private/checksd.cc
@@ -149,7 +138,7 @@ target_link_libraries(tsmc
                 ${PHOTOSPLINE_LIBRARIES} -lboost_log)
 
 
-target_link_libraries(make-local-maps 
+target_link_libraries(make-degbin-maps 
     ${PHOTOSPLINE_LIBRARIES} photospline 
     ${HEALPIX-CXX_LIBRARIES} 
     ${Boost_LIBRARIES} 
@@ -159,13 +148,6 @@ target_link_libraries(make-local-maps
 target_link_libraries(get_azimuth ${PHOTOSPLINE_LIBRARIES} photospline ${HEALPIX-CXX_LIBRARIES} ${Boost_LIBRARIES} ${ROOT_LIBRARIES} )
 
 target_link_libraries(make-mc-hawc-local-maps ${PHOTOSPLINE_LIBRARIES} photospline ${HEALPIX-CXX_LIBRARIES} ${Boost_LIBRARIES} ${ROOT_LIBRARIES} )
-
-target_link_libraries(make-sidereal-maps 
-    ${PHOTOSPLINE_LIBRARIES} photospline 
-    ${HEALPIX-CXX_LIBRARIES} 
-    ${Boost_LIBRARIES} 
-    ${ROOT_LIBRARIES} 
-    ${PAL_LIBRARIES})
 
 target_link_libraries(combine-local-maps ${HEALPIX-CXX_LIBRARIES} ${Boost_LIBRARIES})
 
@@ -201,17 +183,25 @@ configure_file(${CMAKE_SOURCE_DIR}/scripts/submit_all.py.in
            ${CMAKE_BINARY_DIR}/scripts/submit_all.py
            @ONLY)
 
-configure_file(${CMAKE_SOURCE_DIR}/scripts/make-local-maps.py.in
-           ${CMAKE_BINARY_DIR}/scripts/make-local-maps.py
+configure_file(${CMAKE_SOURCE_DIR}/scripts/make-degbin-maps.py.in
+           ${CMAKE_BINARY_DIR}/scripts/make-degbin-maps.py
            @ONLY)
 
 configure_file(${CMAKE_SOURCE_DIR}/scripts/combine-local-maps.py.in
            ${CMAKE_BINARY_DIR}/scripts/combine-local-maps.py
            @ONLY)
 
+configure_file(${CMAKE_SOURCE_DIR}/scripts/time-scramble_IT.py.in
+           ${CMAKE_BINARY_DIR}/scripts/time-scramble_IT.py
+           @ONLY)
+
+#configure_file(${CMAKE_SOURCE_DIR}/scripts/time-scramble_IC.py.in
+#           ${CMAKE_BINARY_DIR}/scripts/time-scramble_IC.py
+#           @ONLY)
+
 if(IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/scripts)
-       exec_program(test ARGS -h ${CMAKE_BINARY_DIR}/scripts/npx4 -a -e ${CMAKE_BINARY_DIR}/scripts/npxi4
-            || ln -snf ${CMAKE_SOURCE_DIR}/scripts/npx4 ${CMAKE_BINARY_DIR}/scripts/npx4
+       exec_program(test ARGS -h ${CMAKE_BINARY_DIR}/scripts/submitter -a -e ${CMAKE_BINARY_DIR}/scripts/submitter
+            || ln -snf ${CMAKE_SOURCE_DIR}/scripts/submitter ${CMAKE_BINARY_DIR}/scripts/submitter
             OUTPUT_VARIABLE DEV_NULL)
        install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/scripts
          DESTINATION ${CMAKE_BINARY_DIR}/scripts

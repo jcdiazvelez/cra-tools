@@ -1,11 +1,11 @@
 #!/bin/env python
 
-import sys, os, glob, re, argparse
+import os, glob, re, argparse
 import datetime as dt
 import random
+from pathlib import Path
 
-#sys.path.append('/home/fmcnally/npx4')
-from npx4.pysubmit import pysubmit
+from submitter.pysubmit import pysubmit
 
 """ 
 INSTRUCTIONS: before executing, change hardcoded paths anywhere you see 
@@ -211,14 +211,15 @@ if __name__ == "__main__":
     if args.cvmfs:
         header = ['#!/bin/sh','eval `' +args.cvmfs +'/setup.sh`']
 
+    # Create output directory if it doesn't exist
+    Path(args.submit_dir).mkdir(parents=True, exist_ok=True)
+
     # Submit files
     print('Submitting %i files...' % len(dayFiles))
-    if not os.path.isdir(args.submit_dir):
-        os.makedirs(args.submit_dir)
     for i in range(len(dayFiles)):
 
         jobID = 'makelocalmaps_%s_%05i_%05i' % (args.config, i, random.randint(0,99999))
-        cmd  = '@CRA_BUILD@/bin/make-local-maps' 
+        cmd  = '@CRA_BUILD@/bin/make-degbin-maps' 
         ex = [cmd, c_opts,'--outdir','{}/{}'.format(outBase,dateList[i]), '--input', dayFiles[i] ]
         ex = ' '.join(ex)
         print(ex)
@@ -228,5 +229,5 @@ if __name__ == "__main__":
                 outdir=args.submit_dir,
                 header=header,
                 priority=args.priority,
-                condor_dag='{}/{}.make-local-maps.dag'.format(args.submit_dir,args.config)
+                condor_dag='{}/{}.make-degbin-maps.dag'.format(args.submit_dir,args.config)
                 )

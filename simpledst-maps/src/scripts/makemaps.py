@@ -62,7 +62,7 @@ if __name__ == "__main__":
         env = "/data/user/juancarlos/simpledst-maps/build/scripts/env-shell.sh"
         # Don't recreate it if it already exists
         call(["/data/user/juancarlos/simpledst-maps/build/scripts/submit.sh",
-                   env, "/data/user/juancarlos/simpledst-maps/build/make-local-maps",
+                   env, "/data/user/juancarlos/simpledst-maps/build/make-degbin-maps",
                    "--outdir="+outpath,  "--input="+filepath, "--nsideout=64",
                    "--spline=/data/user/fmcnally/anisotropy/sim/IC86-III_10649_spline.fits",
                    "--elogmax=4.5",

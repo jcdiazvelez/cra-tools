@@ -20,6 +20,7 @@ class SimpleDST {
   // IceCube parameters
   UShort_t NChannels;
   Bool_t IsGoodLineFit;
+  Bool_t isReco;
   Float_t LLHAzimuthDeg;
   Float_t LLHZenithDeg;
   Float_t RLogL;
@@ -27,18 +28,16 @@ class SimpleDST {
   UInt_t LDir; 
 
   // IceTop parameters
-  Double_t Azimuth;
-  Double_t Zenith;
+  Double_t SPAzimuth;
+  Double_t SPZenith;
+  Int_t SPFitStatus;
+  Double_t LapAzimuth;
+  Double_t LapZenith;
+  Int_t LapFitStatus;
+  Double_t LSAzimuth;
+  Double_t LSZenith;
+  Int_t LSFitStatus;
   Int_t nStations;
-  Bool_t isReco;
-  Bool_t isSTA3;
-  Bool_t isSTA3ii;
-  Bool_t isSTA5;
-  Bool_t isSTA8;
-  Double_t pEnergy;
-  Double_t fEnergy;
-  Double_t pLLH;
-  Double_t fLLH;
   Double_t s125;
   Double_t ss125;
 
@@ -47,6 +46,7 @@ class SimpleDST {
   //IceCube parameters
   TBranch* b_nchan;
   TBranch* b_isGoodLineFit;
+  TBranch* b_isReco;
   TBranch* b_LLHAzimuth;
   TBranch* b_LLHZenith;
   TBranch* b_RLogL;
@@ -54,18 +54,16 @@ class SimpleDST {
   TBranch* b_LDir;
 
   //IceTop parameters
-  TBranch* b_Azimuth;
-  TBranch* b_Zenith;
+  TBranch* b_SPAzimuth;
+  TBranch* b_SPZenith;
+  TBranch* b_SPFitStatus;
+  TBranch* b_LapAzimuth;
+  TBranch* b_LapZenith;
+  TBranch* b_LapFitStatus;
+  TBranch* b_LSAzimuth;
+  TBranch* b_LSZenith;
+  TBranch* b_LSFitStatus;
   TBranch* b_nStations;
-  TBranch* b_isReco;
-  TBranch* b_isSTA3;
-  TBranch* b_isSTA3ii;
-  TBranch* b_isSTA5;
-  TBranch* b_isSTA8;
-  TBranch* b_pEnergy;
-  TBranch* b_fEnergy;
-  TBranch* b_pLLH;
-  TBranch* b_fLLH;
   TBranch* b_s125;
   TBranch* b_ss125;
 

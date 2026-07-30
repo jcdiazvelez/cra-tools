@@ -26,7 +26,7 @@
 #include <iterator>
 #include <vector>
 
-#include <iter-lhreco-proj/pickle.h>
+#include <pickle.h>
 #include "TFile.h"
 #include "TTree.h"
 #include <TChain.h>
@@ -37,7 +37,6 @@
 #include <astro/time.h>
 #include <Direction.h>
 #include <solardipole.h>
-#include <SimpleTrigger.h>
 
 
 
@@ -58,8 +57,6 @@ using boost::format;
 typedef Healpix_Map<double> SkyMap; 
 typedef boost::shared_ptr<SkyMap> SkyMapPtr; // Map shared pointer
 
-bool newConfig(string config);
-
 double 
 Sum(const SkyMap& map,unsigned int npix) 
 {
@@ -69,25 +66,6 @@ Sum(const SkyMap& map,unsigned int npix)
          sumval += map[i];
     }
     return sumval;
-}
-
-bool filterCut(po::variables_map vm, SimpleDST dst) {
-
-  string filter = vm["filter"].as<string>();
-  string config = vm["config"].as<string>();
-  if (filter=="STA3" && dst.isSTA3)
-    return true;
-  if (config=="IT59" || config=="IT73" || config=="IT81") {
-    if ((filter=="STA8" && dst.isSTA8) ||
-        (filter=="NotSTA8" && dst.isSTA3 && !dst.isSTA8))
-      return true;
-  }
-  if (config=="IT81-2012" || config=="IT81-2013") {
-    if ((filter=="STA8" && dst.nStations>=8) ||
-        (filter=="NotSTA8" && dst.isSTA3 && dst.nStations<8))
-      return true;
-  }
-  return false;
 }
 
 
@@ -100,7 +78,6 @@ int main(int argc, char* argv[])
     std::string foldername;
     std::string method("sid");
     std::string config;
-    std::string filter;
     unsigned int nTimesteps;
     unsigned int nIterations;
     unsigned int nSectors;
@@ -140,7 +117,6 @@ int main(int argc, char* argv[])
              ("sundp", po::bool_switch(&sundp)->default_value(false), "subtract solar dipole")
              ("config", po::value<string>(&config), "Detector configuration") 
              ("method", po::value<string>(&method), "Sidereal, Anti, Solar, Extended")
-             ("filter", po::value<string>(&filter), "Filter for IceTop data")
              ;
      
         //po::store(po::parse_command_line(argc, argv, desc),  vm); // can throw 
@@ -174,15 +150,12 @@ int main(int argc, char* argv[])
 ////// Initialize ///////////////////////////////////////////////////////////// 
 //*****************************************************************************
     const char* masterTree;
-    const char* triggerTree;
     string detector = config.substr(0,2); 
     if (detector == "IC") { 
         masterTree = "CutDST"; 
-        triggerTree = "TDSTTriggers"; 
     } 
     if (detector == "IT") { 
         masterTree = "master_tree"; 
-        triggerTree = "";   // Unused? Will probably break IT functionality...  
     }
 
 
@@ -192,14 +165,6 @@ int main(int argc, char* argv[])
         cutDST.Add(input[i].c_str()); 
     } 
     SimpleDST dst(&cutDST, config);
-
-    TChain trigDST(triggerTree);
-    if (newConfig(config)) { 
-        for (unsigned i = 0; i < input.size(); ++i) { 
-            trigDST.Add(input[i].c_str()); 
-        }
-    } 
-    SimpleTrigger dst_trig(&trigDST);
 
     cout << "Number of chained files: " << cutDST.GetNtrees() << endl; 
     Long64_t nEntries = cutDST.GetEntries();
@@ -267,9 +232,6 @@ int main(int argc, char* argv[])
 
             for (int i = 0; i < nEntries; ++i) {
                cutDST.GetEntry(i); 
-               if (newConfig(config)) { 
-                   trigDST.GetEntry(i); 
-               }
 
                if ( (rloglmax > 0 ) && (dst.RLogL > rloglmax) )
                   continue; 
@@ -305,16 +267,10 @@ int main(int argc, char* argv[])
                if (!dst.isReco || zenith != zenith || azimuth != azimuth) 
                    continue;
 
-               // IceTop filter cut
-               if (vm.count("filter") && !filterCut(vm, dst)) 
-                   continue;
-               
+               // Energy cut for IceCube
                if (vm.count("spline") && !ICenergyCut(dst, spline, zenith, elogmin, elogmax))
                   continue;
 
-               // Energy cuts for IceTop and IceCube
-               if (detector == "IT" && !ITenergyCut(dst, elogmin,elogmax)) 
-                   continue;
 
                pointing pt(zenith, azimuth);
 
@@ -360,13 +316,5 @@ int main(int argc, char* argv[])
     }
 }
 
-bool newConfig(string config) {
-
-  if (config=="IC86-2011" || config=="IC86-2012" || config=="IC86-2013" || 
-      config=="IC86-2014" || config=="IC86-2015") {
-    return false;
-  }
-  return true;
-}
 
 

@@ -1,0 +1,216 @@
+#!/usr/bin/env python
+
+import argparse
+import re
+from pathlib import Path
+import datetime as dt
+from submitter.pysubmit import pysubmit
+
+
+if __name__ == "__main__":
+
+    print('Code development was temporarily paused as of 2026-07-22. Resume after pass3 (and corresponding nano-DST) files are available.')
+    raise
+
+    p = argparse.ArgumentParser(
+            description=('Makes time-scrambled healpix maps for use with '
+                         'cosmic-ray anisotropy analyses'),
+            formatter_class=argparse.RawTextHelpFormatter)
+
+    # Common options
+    p.add_argument('-y', '--year', dest='year',
+            nargs='+',
+            help='Calendar year [2011-2021]')
+    p.add_argument('--outdir', dest='outdir',
+            default='@CRA_BUILD@/maps',
+            help='Destination directory for output files')
+    p.add_argument('--outfile', dest='outfile',
+            help='Base name for output file')
+    p.add_argument('-m', '--method', dest='method',
+            choices=['sid','solar','anti','ext'],
+            default='sid',
+            help='Time frame for coordinate conversion')
+
+    # Energy binning
+    p.add_argument('--ebins', dest='ebins', nargs='+',
+            help='Option to bin events in energy')
+    p.add_argument('--spline', dest='spline',
+            help='Spline file for energy reconstruction (in-ice)')
+
+    # Additional options
+    p.add_argument('--test', dest='test',
+            default=False, action='store_true',
+            help='Option for running off cluster to test')
+    p.add_argument('--overwrite', dest='overwrite',
+            default=False, action='store_true',
+            help='Option to overwrite existing map files')
+
+    # Uncommon options -- use with caution
+    p.add_argument('-t', '--nint', dest='nint',
+            help=('Time-scrambling window --- defaults to total runtime '
+                  'OR 24h if you want calendar days'))
+    p.add_argument('--N', dest='N',
+            default=2, # Job length of ~1 hour
+            help='Batch size for job submission (# days/job)')
+    p.add_argument('--sd', dest='sundp',
+            default=False, action='store_true',
+            help='Weight individual events to correct for solar dipole')
+    p.add_argument('--cvmfs', dest='cvmfs',
+            default='@CVMFS_SROOTBASE@',
+            help='CVMFS environment')
+
+    # Temporarily deprecated options
+    #p.add_argument('--submit_dir', dest='submit_dir',
+    #        default='@CRA_BUILD@/submit-dir',
+    #        help='submit directory')
+    #p.add_argument('--condor-priority', dest='priority',
+    #        default=1, 
+    #        help='Job priority in condor')
+
+    args = p.parse_args()
+
+
+    # Default base naming scheme for outfiles (if not provided)
+    if args.outfile == None:
+        args.outfile = f'TS_{args.method}'
+        if args.sundp:
+            args.outfile += '_sd'
+
+    # Options to be passed directly to make-local-maps.cc
+    c_opts = {'config':'IC86', 'method':args.method}
+
+    # Print options for user
+    print('Parameters for submission:')
+    for key, value in sorted(c_opts.items()):
+        print('  --%s %s' % (key, value))
+    if args.sundp:
+        print('  --sundp')
+
+    # Memory requirements appear to cap out around 2500 MB
+    sublines = ["request_memory = 3000"]
+
+    # Environment for script
+    header = ['#!/bin/bash']
+    if args.cvmfs:
+        header += [f'eval `{args.cvmfs}/setup.sh`']
+
+    # Lazy approach for all years
+    if args.year == ['all']:
+        args.year = list(range(2011,2022))
+
+    # List of all root files
+    print('Collecting all root files...')
+    file_path = Path('/data/ana/CosmicRay/Anisotropy/IceCube')
+    file_list = file_path.glob(f'IC86-20??/**/*.root')
+    file_list = [str(f) for f in file_list]
+
+    for year in args.year:
+
+        print(f'Working on {year}...')
+
+        # List of root files within target year
+        year_list = [f for f in file_list if f'_{year}-' in f]
+
+        # Establish output path (create if it doesn't already exist)
+        outdir = Path(f'{args.outdir}/{year}')
+        outdir.mkdir(parents=True, exist_ok=True)
+
+        # Loop over dates to build a list of files for submission
+        date_list = [re.findall(r'\d{4}-\d{2}-\d{2}', f)[-1]
+                for f in year_list]
+        date_list = sorted(set(date_list))
+
+        # Storage for job submission parameters
+        c_list = []
+
+        for ymd in date_list[:10]:
+
+            # Check for existing files
+            test_base = f'{args.outfile}_{ymd}'
+
+            # If not planning on overwriting, check for existing files
+            if not args.overwrite:
+
+                # Get list of existing filenames
+                ex_files = {f.name for f in 
+                        outdir.glob(f'{test_base}*.fits.gz')}
+
+                # Generate the filenames we expect to see
+                ex_names = [f'{test_base}.fits.gz']
+                if args.ebins != None:
+                    ex_names = (f'{test_base}_{i}-{j}GeV.fits.gz'
+                            for i, j in zip(args.ebins[:-1], args.ebins[1:]))
+
+                # Skip this day if all expected files are already present
+                if all(n in ex_files for n in ex_names):
+                    continue
+
+            # Collect input files associated with date
+            infiles = [f for f in year_list if ymd in f]
+
+            # Input files need to include previous day for midnight->midnight
+            date = dt.datetime.strptime(ymd, '%Y-%m-%d').date()
+            prev = date - dt.timedelta(1)
+            prev_str = dt.datetime.strftime(prev, '%Y-%m-%d')
+            prev_files = [f for f in file_list if prev_str in f]
+            infiles = prev_files + infiles
+
+            print(ymd)
+            for f in infiles:
+                print(f'  {f}')
+            print()
+            continue
+
+            # Update c_opts dictionary for this date
+            c_opts['outdir'] = str(outdir)
+            c_opts['outfile'] = test_base
+            c_opts['input'] = ' '.join(infiles)
+            # Remove dashes from date formatting for c option
+            c_opts['yyyymmdd'] = ''.join(ymd.split('-'))
+
+            # Convert c_opts dictionary to a string for submission
+            c_str = ' '.join(f'--{k} {v}' for k, v in sorted(c_opts.items()))
+
+            # Include additional flags without arguments at end
+            if args.sundp:
+                c_str += ' --sundp'
+
+            # Save c_opts for days that pass above checks
+            c_list += [c_str]
+
+        raise
+
+        # Batch the c_opts
+        sub_lists = [c_list[i:i+args.N] for i in range(0, len(c_list), args.N)]
+
+        # Limit submissions if running in test mode
+        if args.test:
+            sub_lists = sub_lists[:1]
+
+        # Submit
+        #cmd = f'{script_dir}/simpledst-maps/build/bin/make-local-maps'
+        #cmd='/home/fmcnally/cra-tools/simpledst-maps/build/bin/make-local-maps'
+        cmd  = '@CRA_BUILD@/bin/TimeScramble'
+        for sub_batch in sub_lists:
+
+            # Name job
+            jobID = f'{args.outfile}'
+            for s in [sub_batch[0], sub_batch[-1]]:
+                date = re.findall(r'IC86\.\d{4}_\d{4}_\d{4}', s)[-1]
+                jobID += f'_{date}'
+
+            # Create and print list of executables
+            print(f'\n{jobID}')
+            ex_list = []
+            for c_opts_str in sub_batch:
+                ex = f'{cmd} {c_opts_str}'
+                ex_list += [ex]
+                print(ex)
+
+            pysubmit(ex_list, sublines=sublines, test=args.test, jobID=jobID,
+                    header=header
+                    #outdir=submit_dir,
+                    #priority=args.priority
+                    )
+
+
